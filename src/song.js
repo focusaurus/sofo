@@ -140,6 +140,36 @@ export function barCount(section) {
 }
 
 /**
+ * Note values a tempo can be counted in. `beam` is how many flags the drawn
+ * glyph gets, `hollow` whether the notehead is open, `dot` whether it is dotted.
+ */
+export const TEMPO_UNITS = {
+  half: { label: "Half note", hollow: true, flags: 0, dot: false },
+  "dotted-half": { label: "Dotted half note", hollow: true, flags: 0, dot: true },
+  quarter: { label: "Quarter note", hollow: false, flags: 0, dot: false },
+  "dotted-quarter": { label: "Dotted quarter note", hollow: false, flags: 0, dot: true },
+  eighth: { label: "Eighth note", hollow: false, flags: 1, dot: false },
+};
+
+/** Compound meters are felt in dotted-quarter pulses, not quarters. */
+export function isCompoundTime(time) {
+  const m = /^(\d+)\s*\/\s*(\d+)$/.exec(String(time ?? ""));
+  if (!m) return false;
+  const [, beats, division] = m.map(Number);
+  return division === 8 && beats % 3 === 0 && beats > 3;
+}
+
+/**
+ * Which note value the tempo counts. Explicit `tempoUnit` wins; otherwise 6/8,
+ * 9/8 and 12/8 default to a dotted quarter and everything else to a quarter,
+ * which is what a musician would assume from the time signature alone.
+ */
+export function tempoUnitOf(song) {
+  if (song.tempoUnit && song.tempoUnit in TEMPO_UNITS) return song.tempoUnit;
+  return isCompoundTime(song.time) ? "dotted-quarter" : "quarter";
+}
+
+/**
  * The "starting notes" facts, in reading order, skipping anything absent.
  * Groove leads: it is the first thing a band needs and the last thing a chord
  * chart usually says. Count-off is deliberately excluded — it runs long enough
@@ -151,11 +181,14 @@ export function startingNotes(song, { includeEmpty = false } = {}) {
     { label: "Time", value: song.time, path: "time" },
     // Declared numeric so an edit stores 120, not "120", even when the field
     // started out empty and there is no previous number to infer the type from.
+    // `unit` makes the renderer draw a note-value glyph before the number.
     {
       label: "Tempo",
       value: song.tempo == null ? "" : `${song.tempo}`,
       path: "tempo",
       edit: "number",
+      kind: "tempo",
+      unit: tempoUnitOf(song),
     },
     {
       label: "Feel",

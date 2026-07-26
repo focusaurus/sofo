@@ -138,6 +138,32 @@ song-fact dd {
   font-weight: 600;
 }
 
+/* Tempo reads as a metronome marking: note-value glyph = number. */
+song-fact[data-kind="tempo"] dd {
+  display: flex;
+  gap: 0.03in;
+  align-items: center;
+}
+
+song-unit {
+  display: block;
+  line-height: 0;
+}
+
+/* Sized off the surrounding type and colored by currentColor, so it tracks the
+   text it sits beside and goes solid black in grayscale. */
+.song-note-value {
+  display: block;
+  width: 0.09in;
+  height: 0.14in;
+  overflow: visible;
+}
+
+song-fact[data-kind="tempo"] .equals {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
 /* Groove/feel sits after tempo and carries a little extra weight: it sets how
    everything else is played. */
 song-fact[data-kind="groove"] dd {

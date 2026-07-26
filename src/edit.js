@@ -53,6 +53,16 @@ export function isBlankBar(song, path) {
   return Array.isArray(value) && value.filter(Boolean).length === 0;
 }
 
+/** "quarter:Quarter note,eighth:Eighth note" -> [[value, label], ...] */
+function parseChoices(spec) {
+  if (!spec) return null;
+  const pairs = spec
+    .split(",")
+    .map((pair) => pair.split(":"))
+    .filter(([value, label]) => value && label);
+  return pairs.length ? pairs : null;
+}
+
 /** Turn a stored value into the text shown in the editor. */
 function toText(kind, value) {
   if (kind === "lines") return (value ?? []).join("\n");
@@ -140,10 +150,27 @@ export function attachEditing(sheet) {
     if (!path || open) return;
     const before = getPath(sheet.song, path);
     const multiline = kind === "lines";
-    const control = document.createElement(multiline ? "textarea" : "input");
+    const choices = kind === "choice" ? parseChoices(host.dataset.choices) : null;
+    const control = document.createElement(
+      choices ? "select" : multiline ? "textarea" : "input",
+    );
     control.className = "song-editor";
-    control.value = toText(kind, before);
     control.dataset.kind = kind;
+    if (choices) {
+      for (const [value, label] of choices) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        control.append(option);
+      }
+      // A blank stored value means "inferred from the time signature", so fall
+      // back to whatever the renderer is currently showing.
+      control.value = before || host.dataset.current || choices[0][0];
+      // A dropdown has no text to type, so picking a value is the whole edit.
+      control.addEventListener("change", () => close(true));
+    } else {
+      control.value = toText(kind, before);
+    }
     if (multiline) control.rows = Math.max(2, control.value.split("\n").length);
 
     // Match the box being replaced so the layout does not jump.

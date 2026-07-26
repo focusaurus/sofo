@@ -7,8 +7,15 @@
  * writes through paths into the song object rather than reading the rendered DOM.
  */
 import { readFileSync } from "node:fs";
-import { normalizeSong, phrasesOf, startingNotes } from "../src/song.js";
-import { getPath, setPath } from "../src/edit.js";
+import {
+  isCompoundTime,
+  normalizeSong,
+  phrasesOf,
+  startingNotes,
+  TEMPO_UNITS,
+  tempoUnitOf,
+} from "../src/song.js";
+import { barPaths, getPath, isBlankBar, setPath, stepBarPath } from "../src/edit.js";
 import { createRenderer } from "../src/render.js";
 import { createDocument } from "./dom-shim.js";
 
@@ -73,9 +80,68 @@ console.log("\n# Phrase index survives row packing, so paths stay correct");
 const outro = song.sections.at(-1);
 check(phrasesOf(outro).map((p) => p.index), [0, 1], "outro phrase indexes");
 
+// Head markup used by the tempo checks below.
+const readOnlyHead = String(createRenderer(createDocument())(song)[0]);
+
 console.log("\n# Edit mode exposes empty facts so they can be filled in");
 check(startingNotes({}).length, 0, "read-only view hides empty facts");
 check(startingNotes({}, { includeEmpty: true }).map((f) => f.path), ["key", "time", "tempo", "groove"], "edit view lists all fact paths");
+
+console.log("\n# Tempo note value");
+check(tempoUnitOf({ time: "4/4" }), "quarter", "simple meter counts in quarters");
+check(tempoUnitOf({ time: "3/4" }), "quarter", "3/4 counts in quarters");
+check(tempoUnitOf({ time: "6/8" }), "dotted-quarter", "6/8 counts in dotted quarters");
+check(tempoUnitOf({ time: "9/8" }), "dotted-quarter", "9/8 counts in dotted quarters");
+check(tempoUnitOf({ time: "12/8" }), "dotted-quarter", "12/8 counts in dotted quarters");
+check(tempoUnitOf({ time: "3/8" }), "quarter", "3/8 is simple, not compound");
+check(tempoUnitOf({ time: "2/2" }), "quarter", "cut time still defaults to quarter");
+check(tempoUnitOf({ time: "6/8", tempoUnit: "eighth" }), "eighth", "explicit unit wins");
+check(tempoUnitOf({ time: "4/4", tempoUnit: "nonsense" }), "quarter", "unknown unit falls back");
+check(isCompoundTime("6/8"), true, "6/8 is compound");
+check(isCompoundTime("4/4"), false, "4/4 is not");
+check(isCompoundTime(undefined), false, "missing time signature is not compound");
+check(Object.keys(TEMPO_UNITS), ["half", "dotted-half", "quarter", "dotted-quarter", "eighth"], "available note values");
+// The glyph must be drawn, never a character: U+2669 and U+1D15F are absent
+// from Noto Sans, Source Sans, DejaVu and Liberation.
+check(/[♩-♬]|\ud834/.test(readOnlyHead), false, "no musical Unicode characters in output");
+check(readOnlyHead.includes('class="song-note-value"'), true, "the note value is drawn as SVG");
+check(readOnlyHead.includes("<ellipse"), true, "notehead is drawn");
+
+console.log("\n# Bar order for keyboard entry");
+const paths = barPaths(song);
+check(paths.length, 86, "every bar in the chart is reachable");
+check(paths[0], "sections.0.phrases.0.chords.0", "starts at the first bar");
+check(paths[3], "sections.0.phrases.0.chords.3", "walks along a phrase");
+check(paths[4], "sections.0.phrases.1.chords.0", "crosses into the next phrase");
+check(paths[8], "sections.1.phrases.0.chords.0", "crosses into the next section");
+check(paths.at(-1), "sections.10.phrases.1.chords.1", "ends at the last bar");
+
+console.log("\n# Stepping between bars");
+check(
+  stepBarPath(song, "sections.0.phrases.0.chords.0"),
+  "sections.0.phrases.0.chords.1",
+  "forward one bar",
+);
+check(
+  stepBarPath(song, "sections.0.phrases.0.chords.3"),
+  "sections.0.phrases.1.chords.0",
+  "forward across a phrase boundary",
+);
+check(
+  stepBarPath(song, "sections.1.phrases.0.chords.0", -1),
+  "sections.0.phrases.1.chords.3",
+  "backward across a section boundary",
+);
+check(stepBarPath(song, paths.at(-1)), null, "no bar after the last one");
+check(stepBarPath(song, paths[0], -1), null, "no bar before the first one");
+check(stepBarPath(song, "sections.99.phrases.0.chords.0"), null, "unknown path steps nowhere");
+
+console.log("\n# Blank bars are the ones Enter walks into");
+// The intro is Gmaj7 / — / Am7 / — , so bars 1 and 3 are continuations.
+check(isBlankBar(song, "sections.0.phrases.0.chords.0"), false, "Gmaj7 is not blank");
+check(isBlankBar(song, "sections.0.phrases.0.chords.1"), true, "a continuation bar is blank");
+check(isBlankBar(song, "sections.1.phrases.1.chords.2"), false, "a split bar is not blank");
+check(isBlankBar({ sections: [{ phrases: [{ chords: [[]] }] }] }, "sections.0.phrases.0.chords.0"), true, "an empty array is blank");
 
 console.log("\n# Rendering: edit metadata appears only in edit mode");
 const readOnly = createRenderer(createDocument())(song).map(String).join("");
