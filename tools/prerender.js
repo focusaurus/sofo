@@ -73,7 +73,11 @@ if (!songPath) {
 }
 
 const song = JSON.parse(readFileSync(songPath, "utf8"));
-const css = readFileSync(resolve(ROOT, "src/sheet.css"), "utf8");
+// The output HTML lands outside the repo, so relative font URLs would 404.
+const css = readFileSync(resolve(ROOT, "src/sheet.css"), "utf8").replaceAll(
+  'url("fonts/',
+  `url("file://${resolve(ROOT, "src/fonts")}/`,
+);
 const body = createRenderer(doc)(song)
   .map(String)
   .join("\n");
