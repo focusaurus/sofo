@@ -44,6 +44,22 @@ export function createRenderer(doc, { editing = false } = {}) {
   };
 
   /**
+   * A structural-edit button. Actions are named, not wired to handlers here, so
+   * the renderer stays a pure projection of data — edit.js looks the name up in
+   * the ACTIONS registry.
+   */
+  const action = (name, glyph, title, args) =>
+    h("button", {
+      type: "button",
+      class: "song-action",
+      "data-action": name,
+      title,
+      "aria-label": title,
+      text: glyph,
+      ...Object.fromEntries(Object.entries(args).map(([k, v]) => [`data-${k}`, v])),
+    });
+
+  /**
    * The simile (repeat-previous-measure) mark: a slash flanked by two dots.
    * Drawn as SVG rather than a Unicode musical glyph, which most system fonts
    * lack and would silently render as tofu in a printed PDF.
@@ -107,7 +123,19 @@ export function createRenderer(doc, { editing = false } = {}) {
    */
   const phrase = (p, withLyrics, sectionIndex) => {
     const base = `sections.${sectionIndex}.phrases.${p.index}`;
+    const at = { section: sectionIndex, phrase: p.index };
     return h("song-phrase", { style: `flex-grow: ${p.bars.length}` }, [
+      editing
+        ? h("song-tools", { class: "phrase-tools" }, [
+            action("bar-remove", "−", "Remove last bar", at),
+            action("bar-add", "+", "Add a bar", at),
+            action("phrase-left", "◀", "Move phrase left", at),
+            action("phrase-right", "▶", "Move phrase right", at),
+            action("phrase-duplicate", "⧉", "Duplicate this phrase", at),
+            action("phrase-add", "＋", "Add an empty phrase after this", at),
+            action("phrase-delete", "✕", "Delete this phrase", at),
+          ])
+        : null,
       h(
         "song-bars",
         {},
@@ -145,23 +173,43 @@ export function createRenderer(doc, { editing = false } = {}) {
     );
   };
 
+  /**
+   * A section is two nested elements on purpose. The outer one owns spacing and
+   * the page-break rule; the inner frame owns the visible border.
+   *
+   * When a tall section is pushed to a fresh page, Chrome discards its top
+   * margin, which would leave a border drawn exactly on the page's content edge
+   * where the hairline gets clipped. Padding is not discarded there, so the outer
+   * element's top padding holds the frame — and its border — safely inboard.
+   */
   const section = (s, label, i) => {
     const bars = barCount(s);
     const notes = s.notes ?? [];
     return h("song-section", { "data-type": sectionType(s.name) }, [
-      h("song-head-row", {}, [
-        h("song-label", { ...editable(`sections.${i}.name`, "text"), text: label }),
-        bars ? h("song-bar-count", { text: `${bars} bars` }) : null,
+      h("song-frame", {}, [
+        h("song-head-row", {}, [
+          h("song-label", { ...editable(`sections.${i}.name`, "text"), text: label }),
+          bars ? h("song-bar-count", { text: `${bars} bars` }) : null,
+          editing
+            ? h("song-tools", { class: "section-tools" }, [
+                action("section-up", "▲", "Move section up", { section: i }),
+                action("section-down", "▼", "Move section down", { section: i }),
+                action("section-duplicate", "⧉", "Duplicate this section", { section: i }),
+                action("section-add", "＋", "Add an empty section after this", { section: i }),
+                action("section-delete", "✕", "Delete this section", { section: i }),
+              ])
+            : null,
+        ]),
+        phrases(s, i),
+        // One editable block for all of a section's notes, one per line.
+        editing
+          ? h(
+              "song-note",
+              editable(`sections.${i}.notes`, "lines", "Section notes"),
+              notes.map((n) => h("song-line", { text: n })),
+            )
+          : notes.map((n) => h("song-note", { text: n })),
       ]),
-      phrases(s, i),
-      // One editable block for all of a section's notes, one per line.
-      editing
-        ? h(
-            "song-note",
-            editable(`sections.${i}.notes`, "lines", "Section notes"),
-            notes.map((n) => h("song-line", { text: n })),
-          )
-        : notes.map((n) => h("song-note", { text: n })),
     ]);
   };
 
@@ -222,10 +270,19 @@ export function createRenderer(doc, { editing = false } = {}) {
 
   /** All the children of a <song-sheet>, in document order. */
   return function renderSong(song) {
-    const labels = sectionLabels(song.sections ?? []);
+    const sections = song.sections ?? [];
+    const labels = sectionLabels(sections);
     return [
       head(song),
-      ...(song.sections ?? []).map((s, i) => section(s, labels[i], i)),
+      ...sections.map((s, i) => section(s, labels[i], i)),
+      // Appends at the end; -1 covers a song with no sections yet.
+      editing
+        ? h("song-tools", { class: "sheet-tools" }, [
+            action("section-add", "＋ Add section", "Add a section at the end", {
+              section: sections.length - 1,
+            }),
+          ])
+        : null,
       endNotes(song),
       h("song-footer", { text: formatUpdated(song.updated) }),
     ].filter(Boolean);

@@ -264,6 +264,88 @@ song-sheet[editing] song-end-notes:empty {
   min-height: 0.16in;
 }
 
+/* ---------- structural edit toolbars ---------- */
+
+song-tools {
+  display: flex;
+  gap: 0.02in;
+  align-items: center;
+}
+
+.song-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0.19in;
+  height: 0.19in;
+  padding: 0 0.03in;
+  border: var(--hair) solid #b6c2da;
+  border-radius: 0.025in;
+  background: #f4f7fd;
+  color: #33415c;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 8pt;
+  line-height: 1;
+}
+
+.song-action:hover {
+  border-color: #5a7fd0;
+  background: #dfe9fb;
+}
+
+/* Deleting is the one irreversible-looking action, so it reads as dangerous
+   even though Ctrl+Z will bring it back. */
+.song-action[data-action$="-delete"]:hover {
+  border-color: #c0504a;
+  background: #fbe4e2;
+  color: #8f2f28;
+}
+
+/* The phrase toolbar floats over the top-right of its phrase box and only
+   appears on hover, so it never competes with the chords for space. */
+song-phrase {
+  position: relative;
+}
+
+.phrase-tools {
+  position: absolute;
+  top: -0.11in;
+  right: 0.02in;
+  z-index: 2;
+  padding: 0.01in;
+  border-radius: 0.03in;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 0 0.04in rgb(0 0 0 / 18%);
+  opacity: 0;
+  transition: opacity 90ms ease-in;
+  pointer-events: none;
+}
+
+song-phrase:hover > .phrase-tools,
+.phrase-tools:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Section tools are always visible: they are the top-level structure and worth
+   the space, unlike the per-phrase controls. */
+.section-tools {
+  margin-left: 0.08in;
+}
+
+.sheet-tools {
+  justify-content: center;
+  margin-top: var(--gap);
+}
+
+.sheet-tools .song-action {
+  min-width: 1in;
+  height: 0.26in;
+  font-size: 9.5pt;
+  font-weight: 600;
+}
+
 .song-editor {
   box-sizing: border-box;
   width: 100%;
@@ -293,14 +375,22 @@ song-sheet[editing] song-end-notes:empty {
 
 /* ---------- sections ---------- */
 
+/* Spacing and pagination only — no border here. The gap is padding rather than
+   margin because Chrome discards a top margin at the start of a printed page,
+   which would put the frame's border on the clip edge. */
 song-section {
   display: block;
-  margin-top: var(--gap);
+  padding-top: var(--gap);
+  break-inside: avoid;
+}
+
+/* The visible section box. */
+song-frame {
+  display: block;
   padding: 0.08in 0.1in 0.1in;
   border: var(--hair) solid var(--rule);
   border-radius: 0.1in;
   background: var(--paper);
-  break-inside: avoid;
 }
 
 song-section[data-type="intro"] { --tint: var(--tint-intro); }
@@ -316,10 +406,15 @@ song-section[data-type="outro"] { --tint: var(--tint-outro); }
 
 song-head-row {
   display: flex;
-  gap: 0.1in;
+  gap: 0.06in;
   align-items: baseline;
-  justify-content: space-between;
   margin-bottom: 0.06in;
+}
+
+/* Pushes the bar count — and the edit tools, when present — to the right edge,
+   which stays correct however many of them there are. */
+song-label {
+  margin-right: auto;
 }
 
 song-label {
@@ -495,13 +590,15 @@ song-end-notes p {
   margin: 0.04in 0 0;
 }
 
-/* position: fixed repeats the footer on every printed page. */
+/* On screen the footer sits in the flow at the end of the sheet. It only becomes
+   position: fixed in print, where that is what repeats it on every page —
+   viewport-fixed on screen would strand it over the dark page background. */
 song-footer {
-  position: fixed;
-  right: 0.5in;
-  bottom: 0.22in;
+  display: block;
+  margin-top: 0.16in;
   color: var(--ink-soft);
   font-size: 8.5pt;
+  text-align: right;
 }
 
 song-footer::before {
@@ -522,6 +619,7 @@ song-footer::before {
   /* Keep the tints and hairlines instead of letting the print path drop
      backgrounds. Still requires "Background graphics" checked in the dialog. */
   song-section,
+  song-frame,
   song-phrase,
   song-bars,
   song-bar {
@@ -529,8 +627,11 @@ song-footer::before {
     -webkit-print-color-adjust: exact;
   }
 
+  /* Repeats on every printed page. */
   song-footer {
+    position: fixed;
     right: 0;
     bottom: 0;
+    margin-top: 0;
   }
 }

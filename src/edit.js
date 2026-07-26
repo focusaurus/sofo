@@ -112,6 +112,19 @@ export function attachEditing(sheet) {
   };
 
   const onClick = (event) => {
+    // A structural button wins over the editable box it sits inside.
+    const button = event.target.closest?.("[data-action]");
+    if (button && sheet.contains(button)) {
+      event.preventDefault();
+      close(true);
+      const { action, section, phrase } = button.dataset;
+      sheet.applyAction(action, {
+        section: Number(section),
+        phrase: phrase == null ? undefined : Number(phrase),
+      });
+      return;
+    }
+
     const host = event.target.closest?.("[data-path]");
     if (!host || !sheet.contains(host)) return;
     if (open?.host === host) return;
@@ -119,9 +132,21 @@ export function attachEditing(sheet) {
     openEditor(host);
   };
 
+  const onKeyDown = (event) => {
+    // Structural edits are destructive enough to need an escape hatch, and the
+    // shortcut has to work while focus is on the document rather than a field.
+    const inField = event.target.closest?.(".song-editor");
+    if (!inField && (event.metaKey || event.ctrlKey) && event.key === "z") {
+      event.preventDefault();
+      sheet.undo();
+    }
+  };
+
   sheet.addEventListener("click", onClick);
+  document.addEventListener("keydown", onKeyDown);
   return () => {
     close(false);
     sheet.removeEventListener("click", onClick);
+    document.removeEventListener("keydown", onKeyDown);
   };
 }

@@ -2,6 +2,7 @@ import { createRenderer } from "./render.js";
 import { normalizeSong } from "./song.js";
 import { INSTRUMENTS, transposeSong } from "./transpose.js";
 import { attachEditing, setPath } from "./edit.js";
+import { ACTIONS } from "./structure.js";
 
 /**
  * <song-sheet data-src="song.json" transpose="Bb" editing> renders a chart into
@@ -84,10 +85,48 @@ class SongSheet extends HTMLElement {
    * announce the change so chrome outside the sheet can react.
    */
   updateAt(path, value) {
+    this.#pushUndo();
     setPath(this._song, path, value);
+    this.#commit({ path, value });
+  }
+
+  /** Run a named structural action from the ACTIONS registry. */
+  applyAction(name, args) {
+    const op = ACTIONS[name];
+    if (!op) return;
+    const next = op(this._song, args);
+    if (next === this._song) return; // out-of-range target; nothing happened
+    this.#pushUndo();
+    this._song = next;
+    this.#commit({ action: name, ...args });
+  }
+
+  #undoStack = [];
+
+  #pushUndo() {
+    this.#undoStack.push(structuredClone(this._song));
+    // Deep clones of a whole song are cheap at chart scale, but not unbounded.
+    if (this.#undoStack.length > 50) this.#undoStack.shift();
+  }
+
+  /** Step back one edit. Returns false when there is nothing to undo. */
+  undo() {
+    const previous = this.#undoStack.pop();
+    if (!previous) return false;
+    this._song = previous;
+    this.render();
+    this.dispatchEvent(new CustomEvent("songchange", { bubbles: true, detail: { undo: true } }));
+    return true;
+  }
+
+  get canUndo() {
+    return this.#undoStack.length > 0;
+  }
+
+  #commit(detail) {
     this._song.updated = new Date().toISOString();
     this.render();
-    this.dispatchEvent(new CustomEvent("songchange", { bubbles: true, detail: { path, value } }));
+    this.dispatchEvent(new CustomEvent("songchange", { bubbles: true, detail }));
   }
 
   render() {
@@ -135,6 +174,12 @@ class SongControls extends HTMLElement {
       sheet.editing = !sheet.editing;
     });
 
+    const undo = document.createElement("button");
+    undo.type = "button";
+    undo.textContent = "Undo";
+    undo.title = "Undo the last edit (Ctrl/Cmd+Z)";
+    undo.addEventListener("click", () => sheet.undo());
+
     const download = document.createElement("button");
     download.type = "button";
     download.textContent = "Download JSON";
@@ -150,15 +195,18 @@ class SongControls extends HTMLElement {
       edit.setAttribute("aria-pressed", String(on));
       select.disabled = on;
       select.value = sheet.getAttribute("transpose") ?? "C";
+      undo.hidden = !on;
+      undo.disabled = !sheet.canUndo;
       status.textContent = on ? "Editing in concert pitch — click any chord, lyric, or note" : "";
     };
     sheet.addEventListener("editingchange", sync);
     sheet.addEventListener("songchange", () => {
+      undo.disabled = !sheet.canUndo;
       status.textContent = `Saved locally · updated ${new Date().toLocaleTimeString()}`;
       this.#saveDraft();
     });
 
-    this.replaceChildren(label, select, edit, download, status);
+    this.replaceChildren(label, select, edit, undo, download, status);
     sync();
   }
 

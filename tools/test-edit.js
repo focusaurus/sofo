@@ -97,5 +97,34 @@ check(editable.includes('data-path="countOff"'), true, "count-off is editable");
 const soloLyricTargets = [...editable.matchAll(/data-path="sections\.8\.phrases\.\d+\.lyrics"/g)];
 check(soloLyricTargets.length, 4, "every solo phrase offers a lyric target in edit mode");
 
+console.log("\n# Structural toolbars: edit mode only");
+check(readOnly.includes("data-action"), false, "print output has no action buttons");
+check(readOnly.includes("<button"), false, "print output has no buttons at all");
+check(readOnly.includes("song-tools"), false, "print output has no toolbars");
+check(
+  editable.includes('data-action="section-duplicate" title="Duplicate this section"'),
+  true,
+  "section duplicate button",
+);
+check(
+  [...editable.matchAll(/data-action="section-duplicate"/g)].length,
+  song.sections.length,
+  "one section toolbar per section",
+);
+check(
+  [...editable.matchAll(/data-action="phrase-duplicate"/g)].length,
+  song.sections.reduce((n, s) => n + s.phrases.length, 0),
+  "one phrase toolbar per phrase",
+);
+check(editable.includes('data-action="bar-add"'), true, "add-bar button");
+check(editable.includes('data-action="bar-remove"'), true, "remove-bar button");
+// The trailing add-section button targets the last index, so it appends.
+const trailing = /class="sheet-tools">.*?data-action="section-add".*?data-section="(\d+)"/s.exec(editable);
+check(trailing?.[1], String(song.sections.length - 1), "trailing add-section button appends at the end");
+
+console.log("\n# Buttons carry the indexes the actions need");
+const firstPhraseTool = /data-action="phrase-duplicate"[^>]*data-section="(\d+)" data-phrase="(\d+)"/.exec(editable);
+check(firstPhraseTool?.slice(1), ["0", "0"], "first phrase tool addresses section 0, phrase 0");
+
 console.log(`\n${failures ? `${failures} FAILED` : "all passed"}`);
 process.exit(failures ? 1 : 0);
