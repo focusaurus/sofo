@@ -277,16 +277,27 @@ song-tools {
   align-items: center;
   justify-content: center;
   min-width: 0.19in;
-  height: 0.19in;
-  padding: 0 0.03in;
+  height: 0.2in;
+  padding: 0 0.04in;
   border: var(--hair) solid #b6c2da;
   border-radius: 0.025in;
   background: #f4f7fd;
   color: #33415c;
   cursor: pointer;
-  font-family: inherit;
+  /* system-ui has the widest glyph coverage of anything guaranteed present, and
+     these labels are ASCII plus U+00D7 so nothing can go tofu. */
+  font-family: system-ui, sans-serif;
   font-size: 8pt;
+  font-weight: 600;
   line-height: 1;
+  white-space: nowrap;
+}
+
+/* The drawn duplicate icon, sized off the button's own type. */
+.song-icon {
+  display: block;
+  width: 1.15em;
+  height: 1.15em;
 }
 
 .song-action:hover {
