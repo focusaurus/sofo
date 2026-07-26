@@ -370,6 +370,7 @@ song-end-notes {
   display: block;
   margin-top: 0.16in;
   padding-top: 0.08in;
+  break-inside: avoid; /* never strand one ending instruction on its own page */
   border-top: var(--hair) solid var(--rule);
   color: var(--ink-soft);
   font-size: 10pt;
