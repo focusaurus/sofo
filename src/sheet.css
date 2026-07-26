@@ -138,14 +138,8 @@ song-fact dd {
   font-weight: 600;
 }
 
-/* Groove/feel leads the facts row and carries the most weight: it sets how
-   everything else is played. Boxed rather than colored so it survives grayscale. */
-song-fact[data-kind="groove"] {
-  padding: 0.02in 0.07in;
-  border: var(--hair) solid var(--ink-soft);
-  border-radius: 0.03in;
-}
-
+/* Groove/feel sits after tempo and carries a little extra weight: it sets how
+   everything else is played. */
 song-fact[data-kind="groove"] dd {
   font-size: 11.5pt;
   font-weight: 700;

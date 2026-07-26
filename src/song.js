@@ -113,11 +113,11 @@ export function barCount(section) {
  */
 export function startingNotes(song) {
   const facts = [];
-  const groove = song.groove ?? song.feel;
-  if (groove) facts.push(["Feel", groove, "groove"]);
   if (song.key) facts.push(["Key", song.key]);
   if (song.time) facts.push(["Time", song.time]);
   if (song.tempo) facts.push(["Tempo", `${song.tempo}`]);
+  const groove = song.groove ?? song.feel;
+  if (groove) facts.push(["Feel", groove, "groove"]);
   return facts;
 }
 
