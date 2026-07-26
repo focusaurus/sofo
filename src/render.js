@@ -19,7 +19,17 @@ const SVG_NS = "http://www.w3.org/2000/svg";
  * the tiny shim in tools/prerender.js (WeasyPrint cannot execute JavaScript,
  * so PDF checks need a statically rendered file).
  */
-export function createRenderer(doc) {
+export function createRenderer(doc, { editing = false } = {}) {
+  /**
+   * Marks an element as an editable leaf. `path` addresses the value in the song
+   * JSON and `kind` says how to edit it. Emitted only in edit mode so printed
+   * output carries no editing metadata.
+   */
+  const editable = (path, kind, placeholder) =>
+    editing
+      ? { "data-path": path, "data-edit": kind, ...(placeholder ? { "data-placeholder": placeholder } : {}) }
+      : {};
+
   const h = (tag, attrs = {}, children = []) => {
     const el = doc.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
@@ -27,7 +37,9 @@ export function createRenderer(doc) {
       if (k === "text") el.textContent = v;
       else el.setAttribute(k, v === true ? "" : String(v));
     }
-    for (const c of [].concat(children)) if (c) el.append(c);
+    // flat(Infinity): callers pass nested arrays, e.g. a list of note elements
+    // alongside single children.
+    for (const c of [children].flat(Infinity)) if (c) el.append(c);
     return el;
   };
 
@@ -81,10 +93,10 @@ export function createRenderer(doc) {
   };
 
   /** A single measure. Multiple chords split the bar's width evenly. */
-  const bar = (chords) =>
+  const bar = (chords, path) =>
     h(
       "song-bar",
-      { "data-chords": chords.length },
+      { "data-chords": chords.length, ...editable(path, "bar") },
       chords.length ? chords.map((c) => h("song-chord", {}, chord(c))) : simile(),
     );
 
@@ -93,18 +105,26 @@ export function createRenderer(doc) {
    * box inside the phrase box is what makes lyric width track the bars above
    * it — no second flex row to keep in sync.
    */
-  const phrase = (p, withLyrics) => {
-    const el = h("song-phrase", { style: `flex-grow: ${p.bars.length}` }, [
-      h("song-bars", {}, p.bars.map(bar)),
+  const phrase = (p, withLyrics, sectionIndex) => {
+    const base = `sections.${sectionIndex}.phrases.${p.index}`;
+    return h("song-phrase", { style: `flex-grow: ${p.bars.length}` }, [
+      h(
+        "song-bars",
+        {},
+        p.bars.map((chords, i) => bar(chords, `${base}.chords.${i}`)),
+      ),
       withLyrics
-        ? h("song-lyric", {}, (p.lyrics ?? []).map((line) => h("song-line", { text: line })))
+        ? h(
+            "song-lyric",
+            editable(`${base}.lyrics`, "lines"),
+            (p.lyrics ?? []).map((line) => h("song-line", { text: line })),
+          )
         : null,
     ]);
-    return el;
   };
 
   /** Rows of phrase boxes, each phrase sized in proportion to its bar count. */
-  const phrases = (section) => {
+  const phrases = (section, sectionIndex) => {
     const rows = phraseRows(section, MAX_BARS_PER_ROW);
     if (!rows.length) return null;
     return h(
@@ -114,38 +134,55 @@ export function createRenderer(doc) {
         const bars = row.reduce((n, p) => n + p.bars.length, 0);
         // If any phrase in the row sings, every phrase in the row gets a lyric
         // box, so a wordless phrase leaves an aligned gap, not a ragged edge.
-        const anyLyrics = row.some((p) => p.lyrics?.length);
+        // In edit mode every phrase gets one, so there is always a target.
+        const anyLyrics = editing || row.some((p) => p.lyrics?.length);
         return h(
           "song-phrases",
           { "data-density": bars > 6 ? "snug" : "roomy" },
-          row.map((p) => phrase(p, anyLyrics)),
+          row.map((p) => phrase(p, anyLyrics, sectionIndex)),
         );
       }),
     );
   };
 
-  const section = (s, label) => {
+  const section = (s, label, i) => {
     const bars = barCount(s);
+    const notes = s.notes ?? [];
     return h("song-section", { "data-type": sectionType(s.name) }, [
       h("song-head-row", {}, [
-        h("song-label", { text: label }),
+        h("song-label", { ...editable(`sections.${i}.name`, "text"), text: label }),
         bars ? h("song-bar-count", { text: `${bars} bars` }) : null,
       ]),
-      phrases(s),
-      ...(s.notes ?? []).map((n) => h("song-note", { text: n })),
+      phrases(s, i),
+      // One editable block for all of a section's notes, one per line.
+      editing
+        ? h(
+            "song-note",
+            editable(`sections.${i}.notes`, "lines", "Section notes"),
+            notes.map((n) => h("song-line", { text: n })),
+          )
+        : notes.map((n) => h("song-note", { text: n })),
     ]);
   };
 
   const head = (song) => {
-    const facts = startingNotes(song).map(([label, value, kind]) =>
-      h("song-fact", { "data-kind": kind }, [
-        h("dt", { text: label }),
-        h("dd", { text: value }),
-      ]),
+    const facts = startingNotes(song, { includeEmpty: editing }).map(
+      ({ label, value, path, kind }) =>
+        h("song-fact", { "data-kind": kind }, [
+          h("dt", { text: label }),
+          h("dd", { ...editable(path, "text", label), text: value }),
+        ]),
     );
+    const notes = song.notes ?? [];
     return h("song-head", {}, [
-      h("h1", { text: song.title ?? "Untitled" }),
-      song.artist ? h("p", { class: "artist", text: song.artist }) : null,
+      h("h1", { ...editable("title", "text"), text: song.title ?? "Untitled" }),
+      song.artist || editing
+        ? h("p", {
+            class: "artist",
+            ...editable("artist", "text", "Artist"),
+            text: song.artist ?? "",
+          })
+        : null,
       facts.length ? h("dl", { class: "facts" }, facts) : null,
       // Printed on the chart so a transposed part is never mistaken for a
       // concert one once it is a PDF on someone's tablet.
@@ -154,27 +191,41 @@ export function createRenderer(doc) {
             text: `${INSTRUMENTS[song.transposedFor]?.label ?? song.transposedFor} — written in ${song.key}, concert ${song.concertKey}`,
           })
         : null,
-      song.countOff
+      song.countOff || editing
         ? h("song-count-off", {}, [
             h("dt", { text: "Count off" }),
-            h("dd", { text: song.countOff }),
+            h("dd", {
+              ...editable("countOff", "text", "Who counts off, and how"),
+              text: song.countOff ?? "",
+            }),
           ])
         : null,
-      ...(song.notes ?? []).map((n) => h("p", { class: "note", text: n })),
+      editing
+        ? h(
+            "p",
+            { class: "note", ...editable("notes", "lines", "Starting notes") },
+            notes.map((n) => h("song-line", { text: n })),
+          )
+        : notes.map((n) => h("p", { class: "note", text: n })),
     ]);
   };
 
-  const endNotes = (song) =>
-    song.endNotes?.length
-      ? h("song-end-notes", {}, song.endNotes.map((n) => h("p", { text: n })))
-      : null;
+  const endNotes = (song) => {
+    const lines = song.endNotes ?? [];
+    if (!lines.length && !editing) return null;
+    return h(
+      "song-end-notes",
+      editable("endNotes", "lines", "Ending notes"),
+      lines.map((n) => h("p", { text: n })),
+    );
+  };
 
   /** All the children of a <song-sheet>, in document order. */
   return function renderSong(song) {
     const labels = sectionLabels(song.sections ?? []);
     return [
       head(song),
-      ...(song.sections ?? []).map((s, i) => section(s, labels[i])),
+      ...(song.sections ?? []).map((s, i) => section(s, labels[i], i)),
       endNotes(song),
       h("song-footer", { text: formatUpdated(song.updated) }),
     ].filter(Boolean);

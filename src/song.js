@@ -65,7 +65,7 @@ export function phrasesOf(section) {
   const raw = section.phrases ?? [
     { chords: section.chords, bars: section.bars, lyrics: section.lyrics },
   ];
-  return raw.map((phrase) => {
+  return raw.map((phrase, index) => {
     const chords = phrase.chords ?? [];
     const count = Math.max(chords.length, Number(phrase.bars) || 0);
     const bars = [];
@@ -73,8 +73,42 @@ export function phrasesOf(section) {
       const bar = chords[i] ?? "";
       bars.push([].concat(bar).filter((c) => c !== "" && c != null));
     }
-    return { ...phrase, bars };
+    // `index` is the phrase's position in the section's own phrases array, kept
+    // so editing can address it by path even after empty phrases are filtered
+    // out or the row packer regroups them.
+    return { ...phrase, bars, index };
   });
+}
+
+/**
+ * Expand every shorthand into the canonical shape: each section has a phrases
+ * array, each phrase a chords array. Editing addresses data by path
+ * ("sections.2.phrases.1.chords.3"), so the shape has to be predictable —
+ * a section written as `{bars: 8}` has no path to put a chord at.
+ *
+ * Bars are stored as "" (continue previous chord), a single symbol, or an array
+ * of symbols sharing the measure.
+ */
+export function normalizeSong(song) {
+  return {
+    ...song,
+    sections: (song.sections ?? []).map((section) => {
+      const { chords, bars, lyrics, ...rest } = section;
+      return {
+        ...rest,
+        phrases: phrasesOf(section).map((phrase) => {
+          const { bars: barList, index, ...keep } = phrase;
+          return {
+            ...keep,
+            chords: barList.map((barChords) => {
+              if (!barChords.length) return "";
+              return barChords.length === 1 ? barChords[0] : barChords;
+            }),
+          };
+        }),
+      };
+    }),
+  };
 }
 
 /**
@@ -111,14 +145,21 @@ export function barCount(section) {
  * chart usually says. Count-off is deliberately excluded — it runs long enough
  * to wrap badly in a row of short chips, so the renderer gives it its own line.
  */
-export function startingNotes(song) {
-  const facts = [];
-  if (song.key) facts.push(["Key", song.key]);
-  if (song.time) facts.push(["Time", song.time]);
-  if (song.tempo) facts.push(["Tempo", `${song.tempo}`]);
-  const groove = song.groove ?? song.feel;
-  if (groove) facts.push(["Feel", groove, "groove"]);
-  return facts;
+export function startingNotes(song, { includeEmpty = false } = {}) {
+  const facts = [
+    { label: "Key", value: song.key, path: "key" },
+    { label: "Time", value: song.time, path: "time" },
+    { label: "Tempo", value: song.tempo == null ? "" : `${song.tempo}`, path: "tempo" },
+    {
+      label: "Feel",
+      value: song.groove ?? song.feel,
+      path: song.feel != null && song.groove == null ? "feel" : "groove",
+      kind: "groove",
+    },
+  ];
+  // In edit mode empty facts still render, so there is something to click on to
+  // fill them in.
+  return includeEmpty ? facts : facts.filter((f) => f.value);
 }
 
 /** ISO timestamp -> "2026-07-26" in the viewer's locale-neutral form. */

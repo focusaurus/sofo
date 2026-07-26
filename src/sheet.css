@@ -206,11 +206,83 @@ song-controls label {
   font-weight: 600;
 }
 
-song-controls select {
-  padding: 0.03in 0.05in;
+song-controls select,
+song-controls button {
+  padding: 0.03in 0.06in;
   border: 0;
   border-radius: 0.03in;
   font: inherit;
+}
+
+song-controls button {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+song-controls button[aria-pressed="true"] {
+  background: #1f6f3f;
+  color: #fff;
+}
+
+song-controls select:disabled {
+  opacity: 0.5;
+}
+
+song-controls .status {
+  opacity: 0.85;
+  font-size: 9pt;
+}
+
+/* ---------- editing affordances ---------- */
+
+/* Editable leaves get a hover target only in edit mode; the printed document
+   and the read-only view carry no editing chrome at all. */
+song-sheet[editing] [data-path] {
+  border-radius: 0.02in;
+  outline: var(--hair) dashed transparent;
+  outline-offset: 0.01in;
+  cursor: text;
+}
+
+song-sheet[editing] [data-path]:hover {
+  outline-color: #5a7fd0;
+  background: #eef3fd;
+}
+
+/* Empty fields need to be clickable, so they show their label instead of
+   collapsing to nothing. */
+song-sheet[editing] [data-path]:empty::before {
+  color: #8b93a6;
+  content: attr(data-placeholder);
+  font-style: italic;
+  font-weight: 400;
+}
+
+song-sheet[editing] song-note:empty,
+song-sheet[editing] song-end-notes:empty {
+  display: block;
+  min-height: 0.16in;
+}
+
+.song-editor {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.02in 0.03in;
+  border: var(--hair) solid #5a7fd0;
+  border-radius: 0.02in;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+/* A bar's editor is centered like the chord symbol it replaces. */
+.song-editor[data-kind="bar"] {
+  text-align: center;
+}
+
+.song-editor[data-kind="lines"] {
+  font-family: var(--font-lyric);
 }
 
 @media print {
