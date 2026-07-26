@@ -1,0 +1,181 @@
+{
+  "title": "Eight Bars To A Line",
+  "artist": "The Vibe Coders",
+  "key": "G",
+  "groove": "Medium half-time shuffle",
+  "time": "4/4",
+  "tempo": 108,
+  "countOff": "Guitar: 2 bars of the intro riff, band in on the downbeat",
+  "notes": [
+    "Medium pocket, straight eighths. Nobody rushes the pre-chorus.",
+    "Keys take the solo the second time through if we're feeling it."
+  ],
+  "updated": "2026-07-26T14:20:00Z",
+  "sections": [
+    {
+      "name": "intro",
+      "notes": ["Guitar alone for 4, full band joins at bar 5."],
+      "phrases": [{ "chords": ["Gmaj7", "", "Am7", ""] }, { "chords": ["C6", "", "D7sus4", ""] }]
+    },
+    {
+      "name": "verse",
+      "phrases": [
+        {
+          "chords": ["Gmaj7", "Am7", "Bm7", "C6"],
+          "lyrics": [
+            "Three in the morning and the flexbox finally lands,",
+            "eight bars to a line and the chords all understand."
+          ]
+        },
+        {
+          "chords": ["Gmaj7", "Am7", ["Bm7", "C6"], "D7sus4"],
+          "lyrics": [
+            "I never read the dots but I hear the changes fine,",
+            "so I typed it into JSON and it printed out in time."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "prechorus",
+      "notes": ["Build. Hi-hat opens on the last bar."],
+      "phrases": [
+        {
+          "chords": ["Em7", "C6", "Am7", "D7"],
+          "lyrics": [
+            "No more docs with a table full of hacks —",
+            "the song's a shape, and the shape is coming back."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "chorus",
+      "phrases": [
+        {
+          "chords": ["C", "D", "G", ""],
+          "lyrics": [
+            "Vibe code the chart, let the color do the talking,",
+            "eight bars in a row and the whole band keeps on walking."
+          ]
+        },
+        {
+          "chords": ["C", "D", ["G", "Em7"], "Am7"],
+          "lyrics": [
+            "Print it, prop it, stand it on the stand —",
+            "a song shaped like a song, finally in my hand."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "verse",
+      "phrases": [
+        {
+          "chords": ["Gmaj7", "Am7", "Bm7", "C6"],
+          "lyrics": [
+            "Verse one, verse two, they number on their own,",
+            "a slash in the empty bar so no one plays alone."
+          ]
+        },
+        {
+          "chords": ["Gmaj7", "Am7", ["Bm7", "C6"], "D7sus4"],
+          "lyrics": [
+            "The lyrics found the phrase like they always should have done,",
+            "and the date down in the footer says we're only version one."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "prechorus",
+      "phrases": [
+        {
+          "chords": ["Em7", "C6", "Am7", "D7"],
+          "lyrics": [
+            "No more squinting at a photocopied page —",
+            "it's letter size and lit up on the stage."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "chorus",
+      "phrases": [
+        {
+          "chords": ["C", "D", "G", ""],
+          "lyrics": [
+            "Vibe code the chart, let the color do the talking,",
+            "eight bars in a row and the whole band keeps on walking."
+          ]
+        },
+        {
+          "chords": ["C", "D", ["G", "Em7"], "Am7"],
+          "lyrics": [
+            "Print it, prop it, stand it on the stand —",
+            "a song shaped like a song, finally in my hand."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bridge",
+      "notes": ["Half time. Everybody down to a whisper, drums on rims."],
+      "phrases": [
+        {
+          "chords": ["Am7", "", "F6", ""],
+          "lyrics": ["Take it down, half time, everybody breathe —"]
+        },
+        {
+          "chords": ["Cmaj7", "", "D7sus4", "D7"],
+          "lyrics": ["the chart don't need the notes to tell you what to leave."]
+        }
+      ]
+    },
+    {
+      "name": "solo",
+      "notes": ["16 bars. Guitar first time, keys second. Rhythm section keeps the chorus groove."],
+      "phrases": [
+        { "chords": ["C", "D", "G", ""] },
+        { "chords": ["C", "D", "G", ""] },
+        { "chords": ["C", "D", "G", "Em7"] },
+        { "chords": ["Am7", "D7", "G", ""] }
+      ]
+    },
+    {
+      "name": "chorus",
+      "notes": ["Two singers up an octave. Guitar drops to skank."],
+      "phrases": [
+        {
+          "chords": ["C", "D", "G", ""],
+          "lyrics": [
+            "Vibe code the chart, let the color do the talking,",
+            "eight bars in a row and the whole band keeps on walking."
+          ]
+        },
+        {
+          "chords": ["C", "D", ["G", "Em7"], "Am7"],
+          "lyrics": [
+            "Print it, prop it, stand it on the stand —",
+            "a song shaped like a song, finally in my hand."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "outro",
+      "notes": ["Vamp the last two bars."],
+      "phrases": [
+        {
+          "chords": ["C", "D", "G", ""],
+          "lyrics": ["Vamp it till the leader puts a hand up in the air..."]
+        },
+        { "chords": ["C", "D"] }
+      ]
+    }
+  ],
+  "endNotes": [
+    "Ending: on the cutoff, everybody stops on the downbeat of G. Let it ring.",
+    "If the room's still with us, take the chorus one more time a cappella."
+  ]
+}

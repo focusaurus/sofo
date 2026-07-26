@@ -27,6 +27,11 @@
   --tint-other: #eeeeee;
 
   --gap: 0.14in;
+
+  /* 0.75pt is exactly 1 CSS px at 96dpi and still lands on a whole device pixel
+     when Chrome rasterizes for print, so hairlines never round away to nothing. */
+  --hair: 0.75pt;
+  --radius: 0.045in;
 }
 
 html {
@@ -82,8 +87,8 @@ song-head .facts {
   justify-content: center;
   margin: 0.14in 0 0;
   padding: 0.08in 0;
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
+  border-top: var(--hair) solid var(--rule);
+  border-bottom: var(--hair) solid var(--rule);
 }
 
 song-fact {
@@ -105,6 +110,43 @@ song-fact dd {
   font-weight: 600;
 }
 
+/* Groove/feel leads the facts row and carries the most weight: it sets how
+   everything else is played. Boxed rather than colored so it survives grayscale. */
+song-fact[data-kind="groove"] {
+  padding: 0.02in 0.07in;
+  border: var(--hair) solid var(--ink-soft);
+  border-radius: 0.03in;
+}
+
+song-fact[data-kind="groove"] dd {
+  font-size: 11.5pt;
+  font-weight: 700;
+}
+
+/* Count-off runs long, so it gets its own line under the facts rather than
+   wrapping inside a chip. */
+song-count-off {
+  display: flex;
+  gap: 0.06in;
+  align-items: baseline;
+  justify-content: center;
+  margin-top: 0.08in;
+}
+
+song-count-off dt {
+  color: var(--ink-soft);
+  font-size: 8.5pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+song-count-off dd {
+  margin: 0;
+  font-weight: 600;
+}
+
 song-head .note {
   margin: 0.08in 0 0;
   color: var(--ink-soft);
@@ -117,7 +159,7 @@ song-section {
   display: block;
   margin-top: var(--gap);
   padding: 0.08in 0.1in 0.1in;
-  border: 1px solid var(--rule);
+  border: var(--hair) solid var(--rule);
   border-radius: 0.1in;
   background: var(--paper);
   break-inside: avoid;
@@ -160,6 +202,12 @@ song-bar-count {
 /* The colored horizontal bar representing the measures. Phrase boxes sit side
    by side in one line, each flex-grow'd by its bar count so a 4-bar phrase is
    twice the width of a 2-bar phrase. */
+song-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05in;
+}
+
 song-phrases {
   display: flex;
   gap: 0.05in;
@@ -168,11 +216,27 @@ song-phrases {
 
 song-phrase {
   display: flex;
+  flex-direction: column;
   flex-basis: 0;
-  overflow: hidden; /* clip bar borders to the rounded corners */
-  border: 1px solid var(--ink-soft);
-  border-radius: 0.045in;
+  break-inside: avoid; /* a phrase split across a page edge loses its borders */
+  border: var(--hair) solid var(--ink-soft);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+/* The colored measure bar itself. Rounds its own corners to sit inside the
+   phrase box: no overflow clipping, which is what was eating the phrase's
+   top and bottom borders in print rasterization. */
+song-bars {
+  display: flex;
+  align-items: stretch;
+  border-radius: calc(var(--radius) - var(--hair)) calc(var(--radius) - var(--hair)) 0 0;
   background: var(--tint, var(--tint-other));
+}
+
+/* An instrumental phrase has no lyric box, so the tint rounds all four corners. */
+song-bars:last-child {
+  border-radius: calc(var(--radius) - var(--hair));
 }
 
 song-bar {
@@ -184,7 +248,7 @@ song-bar {
   min-width: 0;
   min-height: 0.34in;
   padding: 0.02in 0.03in;
-  border-left: 1px solid var(--rule);
+  border-left: var(--hair) solid var(--rule);
   font-size: 13pt;
   font-weight: 600;
   line-height: 1;
@@ -195,10 +259,9 @@ song-bar:first-child {
   border-left: 0;
 }
 
-/* Many bars in one row means less width per bar, so step the type down rather
-   than let long symbols like Ebmaj7 clip. */
+/* 7 or 8 bars in a row leaves under an inch each, so step the type down rather
+   than let long symbols like Bb7sus4 clip. */
 song-phrases[data-density="snug"] song-bar { font-size: 11.5pt; }
-song-phrases[data-density="tight"] song-bar { font-size: 10pt; gap: 0.02in; }
 
 /* Two or more chords in one bar: split the width and divide them with a slash
    rule so it stays clear they share the measure. */
@@ -206,19 +269,54 @@ song-bar[data-chords="2"] song-chord + song-chord,
 song-bar[data-chords="3"] song-chord + song-chord,
 song-bar[data-chords="4"] song-chord + song-chord {
   padding-left: 0.05in;
-  border-left: 1px dotted var(--ink-soft);
+  border-left: var(--hair) dotted var(--ink-soft);
 }
 
-song-bar[data-chords="0"]::after {
+/* Continuation bar: the simile mark, sized off the bar's own type size. */
+song-repeat {
+  display: block;
+  width: 0.85em;
+  height: 0.85em;
   color: var(--ink-soft);
-  content: "\2013"; /* en dash: this bar continues the previous chord */
-  font-weight: 400;
-  opacity: 0.45;
+}
+
+song-repeat svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 song-chord {
   display: flex;
   align-items: baseline;
+}
+
+/* ---------- lyrics ---------- */
+
+/* Grows to fit its lines; because every phrase in a row is a flex sibling with
+   align-items: stretch, the tallest lyric box sets the height for the row and
+   the bars above stay on one line. */
+song-lyric {
+  display: block;
+  flex: 1 1 auto;
+  padding: 0.045in 0.05in 0.05in;
+  border-top: var(--hair) solid var(--rule);
+  font-size: 9.5pt;
+  line-height: 1.25;
+}
+
+song-line {
+  display: block;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+song-line + song-line {
+  margin-top: 0.015in;
+}
+
+song-phrases[data-density="snug"] song-lyric {
+  font-size: 9pt;
 }
 
 song-quality {
@@ -246,7 +344,7 @@ song-end-notes {
   display: block;
   margin-top: 0.16in;
   padding-top: 0.08in;
-  border-top: 1px solid var(--rule);
+  border-top: var(--hair) solid var(--rule);
   color: var(--ink-soft);
   font-size: 10pt;
 }
@@ -277,6 +375,16 @@ song-footer::before {
     margin: 0;
     padding: 0;
     box-shadow: none;
+  }
+
+  /* Keep the tints and hairlines instead of letting the print path drop
+     backgrounds. Still requires "Background graphics" checked in the dialog. */
+  song-section,
+  song-phrase,
+  song-bars,
+  song-bar {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 
   song-footer {

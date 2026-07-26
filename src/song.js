@@ -62,7 +62,9 @@ export function sectionLabels(sections) {
  * which is why empty bars render blank rather than repeating the symbol.
  */
 export function phrasesOf(section) {
-  const raw = section.phrases ?? [{ chords: section.chords, bars: section.bars }];
+  const raw = section.phrases ?? [
+    { chords: section.chords, bars: section.bars, lyrics: section.lyrics },
+  ];
   return raw.map((phrase) => {
     const chords = phrase.chords ?? [];
     const count = Math.max(chords.length, Number(phrase.bars) || 0);
@@ -75,18 +77,47 @@ export function phrasesOf(section) {
   });
 }
 
+/**
+ * Pack a section's phrases into rows of at most `maxBars` bars, so a 16-bar
+ * section reads as two 8-bar lines instead of sixteen slivers. Phrases are
+ * never split across rows; a phrase longer than maxBars gets a row to itself.
+ */
+export function phraseRows(section, maxBars = 8) {
+  const rows = [];
+  let row = [];
+  let bars = 0;
+  for (const phrase of phrasesOf(section)) {
+    if (!phrase.bars.length) continue;
+    if (row.length && bars + phrase.bars.length > maxBars) {
+      rows.push(row);
+      row = [];
+      bars = 0;
+    }
+    row.push(phrase);
+    bars += phrase.bars.length;
+  }
+  if (row.length) rows.push(row);
+  return rows;
+}
+
 /** Total bar count for a section, used for the bar-count badge. */
 export function barCount(section) {
   return phrasesOf(section).reduce((n, p) => n + p.bars.length, 0);
 }
 
-/** The "starting notes" block, in reading order, skipping anything absent. */
+/**
+ * The "starting notes" facts, in reading order, skipping anything absent.
+ * Groove leads: it is the first thing a band needs and the last thing a chord
+ * chart usually says. Count-off is deliberately excluded — it runs long enough
+ * to wrap badly in a row of short chips, so the renderer gives it its own line.
+ */
 export function startingNotes(song) {
   const facts = [];
+  const groove = song.groove ?? song.feel;
+  if (groove) facts.push(["Feel", groove, "groove"]);
   if (song.key) facts.push(["Key", song.key]);
   if (song.time) facts.push(["Time", song.time]);
   if (song.tempo) facts.push(["Tempo", `${song.tempo}`]);
-  if (song.countOff) facts.push(["Count off", song.countOff]);
   return facts;
 }
 
