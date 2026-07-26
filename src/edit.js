@@ -22,9 +22,41 @@ export function setPath(root, path, value) {
   parent[last] = value;
 }
 
+/**
+ * Every bar's path, in reading order across the whole chart. Used to walk from
+ * one measure to the next during keyboard entry.
+ */
+export function barPaths(song) {
+  const paths = [];
+  (song.sections ?? []).forEach((section, s) => {
+    (section.phrases ?? []).forEach((phrase, p) => {
+      (phrase.chords ?? []).forEach((_, k) => {
+        paths.push(`sections.${s}.phrases.${p}.chords.${k}`);
+      });
+    });
+  });
+  return paths;
+}
+
+/** The bar `delta` places along from `path`, or null at the ends of the chart. */
+export function stepBarPath(song, path, delta = 1) {
+  const paths = barPaths(song);
+  const index = paths.indexOf(path);
+  if (index < 0) return null;
+  return paths[index + delta] ?? null;
+}
+
+/** True when a bar holds no chord — a continuation, shown as the simile mark. */
+export function isBlankBar(song, path) {
+  const value = getPath(song, path);
+  if (value == null || value === "") return true;
+  return Array.isArray(value) && value.filter(Boolean).length === 0;
+}
+
 /** Turn a stored value into the text shown in the editor. */
 function toText(kind, value) {
   if (kind === "lines") return (value ?? []).join("\n");
+  if (kind === "number") return value == null ? "" : String(value);
   if (kind === "bar") return [].concat(value ?? []).filter(Boolean).join(" ");
   return value == null ? "" : String(value);
 }
@@ -49,9 +81,12 @@ function fromText(kind, text, previous) {
     return chords.length === 1 ? chords[0] : chords;
   }
   const trimmed = text.trim();
-  // Keep numeric fields numeric so tempo stays a number in the JSON.
-  if (typeof previous === "number" && trimmed !== "" && Number.isFinite(Number(trimmed))) {
-    return Number(trimmed);
+  // Declared numeric fields, and any field that already held a number, stay
+  // numeric — otherwise tempo would silently become a string once edited.
+  const wantsNumber = kind === "number" || typeof previous === "number";
+  if (wantsNumber) {
+    if (trimmed === "") return "";
+    return Number.isFinite(Number(trimmed)) ? Number(trimmed) : trimmed;
   }
   return trimmed;
 }
@@ -78,6 +113,28 @@ export function attachEditing(sheet) {
     }
   };
 
+  /** Re-find a leaf by path after a re-render and start editing it. */
+  const openPath = (path) => {
+    const host = sheet.querySelector(`[data-path="${path}"]`);
+    if (host) openEditor(host);
+    return Boolean(host);
+  };
+
+  /**
+   * Move to another bar during keyboard entry.
+   *
+   * `onlyIfBlank` is what makes Enter safe to hold down: it walks forward only
+   * while the next measure is empty, so entering harmony never overwrites or
+   * skips past chords that are already there. Tab ignores that and always moves,
+   * for when you do want to revisit a filled bar.
+   */
+  const advance = (from, { delta = 1, onlyIfBlank = false } = {}) => {
+    const next = stepBarPath(sheet.song, from, delta);
+    if (!next) return;
+    if (onlyIfBlank && !isBlankBar(sheet.song, next)) return;
+    openPath(next);
+  };
+
   const openEditor = (host) => {
     const { path, edit: kind } = host.dataset;
     if (!path || open) return;
@@ -97,9 +154,21 @@ export function attachEditing(sheet) {
       if (event.key === "Escape") {
         event.preventDefault();
         close(false);
-      } else if (event.key === "Enter" && (!multiline || event.metaKey || event.ctrlKey)) {
+        return;
+      }
+      if (event.key === "Tab" && kind === "bar") {
+        // Step to the neighbouring measure whether or not it already has a chord.
         event.preventDefault();
         close(true);
+        advance(path, { delta: event.shiftKey ? -1 : 1 });
+        return;
+      }
+      if (event.key === "Enter" && (!multiline || event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        close(true);
+        // Keyboard chord entry: keep going while the next bar is still empty, so
+        // a whole section can be typed without reaching for the mouse.
+        if (kind === "bar") advance(path, { onlyIfBlank: true });
       }
     });
     control.addEventListener("blur", () => close(true));
@@ -109,6 +178,8 @@ export function attachEditing(sheet) {
     open = { control, host, path, kind, before };
     control.focus();
     control.select?.();
+    // Long charts scroll: keep the active measure on screen while typing.
+    control.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   };
 
   const onClick = (event) => {

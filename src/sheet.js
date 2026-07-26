@@ -2,7 +2,7 @@ import { createRenderer } from "./render.js";
 import { normalizeSong } from "./song.js";
 import { INSTRUMENTS, transposeSong } from "./transpose.js";
 import { attachEditing, setPath } from "./edit.js";
-import { ACTIONS } from "./structure.js";
+import { ACTIONS, blankSong } from "./structure.js";
 
 /**
  * <song-sheet data-src="song.json" transpose="Bb" editing> renders a chart into
@@ -90,6 +90,16 @@ class SongSheet extends HTMLElement {
     this.#commit({ path, value });
   }
 
+  /**
+   * Replace the whole document. Undoable like any other edit, so starting a new
+   * song by mistake is recoverable rather than final.
+   */
+  replaceSong(song) {
+    this.#pushUndo();
+    this._song = normalizeSong(song);
+    this.#commit({ replaced: true });
+  }
+
   /** Run a named structural action from the ACTIONS registry. */
   applyAction(name, args) {
     const op = ACTIONS[name];
@@ -174,6 +184,22 @@ class SongControls extends HTMLElement {
       sheet.editing = !sheet.editing;
     });
 
+    const fresh = document.createElement("button");
+    fresh.type = "button";
+    fresh.textContent = "New song";
+    fresh.title = "Start a new blank chart";
+    fresh.addEventListener("click", () => {
+      // Replacing the whole chart is worth a confirm even though it is undoable,
+      // because the draft in localStorage gets overwritten by the next edit.
+      const ok = confirm(
+        "Start a new blank song? The chart on screen will be replaced.\n\n" +
+          "Download JSON first if you want to keep it. (Undo also restores it.)",
+      );
+      if (!ok) return;
+      sheet.replaceSong(blankSong());
+      sheet.editing = true;
+    });
+
     const undo = document.createElement("button");
     undo.type = "button";
     undo.textContent = "Undo";
@@ -197,7 +223,9 @@ class SongControls extends HTMLElement {
       select.value = sheet.getAttribute("transpose") ?? "C";
       undo.hidden = !on;
       undo.disabled = !sheet.canUndo;
-      status.textContent = on ? "Editing in concert pitch — click any chord, lyric, or note" : "";
+      status.textContent = on
+        ? "Editing in concert pitch · Enter fills the next empty bar · Tab steps bar to bar"
+        : "";
     };
     sheet.addEventListener("editingchange", sync);
     sheet.addEventListener("songchange", () => {
@@ -206,7 +234,7 @@ class SongControls extends HTMLElement {
       this.#saveDraft();
     });
 
-    this.replaceChildren(label, select, edit, undo, download, status);
+    this.replaceChildren(fresh, label, select, edit, undo, download, status);
     sync();
   }
 

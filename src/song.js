@@ -149,7 +149,14 @@ export function startingNotes(song, { includeEmpty = false } = {}) {
   const facts = [
     { label: "Key", value: song.key, path: "key" },
     { label: "Time", value: song.time, path: "time" },
-    { label: "Tempo", value: song.tempo == null ? "" : `${song.tempo}`, path: "tempo" },
+    // Declared numeric so an edit stores 120, not "120", even when the field
+    // started out empty and there is no previous number to infer the type from.
+    {
+      label: "Tempo",
+      value: song.tempo == null ? "" : `${song.tempo}`,
+      path: "tempo",
+      edit: "number",
+    },
     {
       label: "Feel",
       value: song.groove ?? song.feel,

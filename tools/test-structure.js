@@ -14,6 +14,7 @@ import {
   addPhrase,
   addSection,
   blankSection,
+  blankSong,
   deletePhrase,
   deleteSection,
   duplicatePhrase,
@@ -24,7 +25,11 @@ import {
 } from "../src/structure.js";
 
 let failures = 0;
-const brief = (s) => (s.length > 72 ? `${s.slice(0, 72)}…` : s);
+// JSON.stringify(undefined) is undefined, not a string, so normalize first.
+const brief = (v) => {
+  const s = String(v);
+  return s.length > 72 ? `${s.slice(0, 72)}…` : s;
+};
 const check = (actual, expected, what) => {
   const a = JSON.stringify(actual);
   const e = JSON.stringify(expected);
@@ -97,6 +102,22 @@ check(removeBar(song, 2, 0).sections[2].phrases[0].chords, ["Em7", "C6", "Am7"],
 check(barCount(removeBar(song, 2, 0).sections[2]), 3, "bar count follows");
 const oneBar = { sections: [{ name: "vamp", phrases: [{ chords: ["C"] }] }] };
 check(removeBar(oneBar, 0, 0).sections[0].phrases[0].chords, ["C"], "never removes the last bar");
+
+console.log("\n# A new blank song");
+const fresh = blankSong();
+check(fresh.title, "Untitled", "has a title to click on");
+check(fresh.sections.map((s) => s.name), ["intro", "verse", "chorus"], "starts with a usable skeleton");
+check(fresh.sections[0].phrases[0].chords, ["", "", "", ""], "sections start as 4 empty bars");
+check(fresh.updated, undefined, "no timestamp — the sheet stamps it on commit");
+check(normalizeSong(fresh), fresh, "already canonical, so paths are valid immediately");
+check(sectionLabels(fresh.sections), ["Intro", "Verse", "Chorus"], "labels render without numbering");
+// Every head field must exist so edit mode shows a placeholder for each.
+check(
+  ["title", "artist", "key", "time", "tempo", "groove", "countOff"].every((k) => k in fresh),
+  true,
+  "every head field is present, even when blank",
+);
+check(barCount(fresh.sections[0]), 4, "bar count works on a blank section");
 
 console.log("\n# Out-of-range targets are no-ops, not crashes");
 check(duplicateSection(song, 99).sections.length, 11, "bad section index");

@@ -13,7 +13,11 @@ import { createRenderer } from "../src/render.js";
 import { createDocument } from "./dom-shim.js";
 
 let failures = 0;
-const brief = (s) => (s.length > 72 ? `${s.slice(0, 72)}…` : s);
+// JSON.stringify(undefined) is undefined, not a string, so normalize first.
+const brief = (v) => {
+  const s = String(v);
+  return s.length > 72 ? `${s.slice(0, 72)}…` : s;
+};
 const check = (actual, expected, what) => {
   const a = JSON.stringify(actual);
   const e = JSON.stringify(expected);

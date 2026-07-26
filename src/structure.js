@@ -19,6 +19,29 @@ export function blankSection(name = "verse") {
   return { name, phrases: [{ chords: ["", "", "", ""] }] };
 }
 
+/**
+ * A new empty chart. Fields the head renders are present but blank so edit mode
+ * shows a placeholder for each one rather than hiding them — the point of a new
+ * document is to see what there is to fill in.
+ *
+ * No `updated` stamp here: the sheet applies one when it commits, keeping this
+ * function pure and testable.
+ */
+export function blankSong() {
+  return {
+    title: "Untitled",
+    artist: "",
+    key: "",
+    time: "4/4",
+    tempo: "",
+    groove: "",
+    countOff: "",
+    notes: [],
+    sections: [blankSection("intro"), blankSection("verse"), blankSection("chorus")],
+    endNotes: [],
+  };
+}
+
 /** A fresh phrase matching the bar count of the one it follows. */
 function blankPhrase(bars = 4) {
   return { chords: Array.from({ length: bars }, () => "") };
