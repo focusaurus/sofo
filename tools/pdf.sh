@@ -10,10 +10,11 @@
 set -euo pipefail
 
 song="${1:-songs/vibe-coding.json}"
+instrument="${2:-C}"
 name="$(basename "${song%.json}")"
-out="${TMPDIR:-/tmp}/sofo-$name"
+out="${TMPDIR:-/tmp}/sofo-$name-$instrument"
 
-node "$(dirname "$0")/prerender.js" "$song" > "$out.html"
+node "$(dirname "$0")/prerender.js" "$song" "$instrument" > "$out.html"
 weasyprint "$out.html" "$out.pdf"
 rm -f "$out"-page-*.png
 pdftoppm -r 100 -png "$out.pdf" "$out-page"

@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRenderer } from "../src/render.js";
+import { transposeSong } from "../src/transpose.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -66,13 +67,13 @@ const doc = {
   createTextNode: (text) => String(text),
 };
 
-const [songPath] = process.argv.slice(2);
+const [songPath, instrument = "C"] = process.argv.slice(2);
 if (!songPath) {
-  console.error("usage: node tools/prerender.js <song.json>");
+  console.error("usage: node tools/prerender.js <song.json> [C|Bb|A|Eb|F]");
   process.exit(2);
 }
 
-const song = JSON.parse(readFileSync(songPath, "utf8"));
+const song = transposeSong(JSON.parse(readFileSync(songPath, "utf8")), instrument);
 // The output HTML lands outside the repo, so relative font URLs would 404.
 const css = readFileSync(resolve(ROOT, "src/sheet.css"), "utf8").replaceAll(
   'url("fonts/',

@@ -6,6 +6,7 @@ import {
   phraseRows,
   barCount,
 } from "./song.js";
+import { INSTRUMENTS } from "./transpose.js";
 
 /** Bars beyond this wrap to another row, keeping 8- and 4-bar phrasing legible. */
 export const MAX_BARS_PER_ROW = 8;
@@ -146,6 +147,13 @@ export function createRenderer(doc) {
       h("h1", { text: song.title ?? "Untitled" }),
       song.artist ? h("p", { class: "artist", text: song.artist }) : null,
       facts.length ? h("dl", { class: "facts" }, facts) : null,
+      // Printed on the chart so a transposed part is never mistaken for a
+      // concert one once it is a PDF on someone's tablet.
+      song.transposedFor
+        ? h("song-transposed", {
+            text: `${INSTRUMENTS[song.transposedFor]?.label ?? song.transposedFor} — written in ${song.key}, concert ${song.concertKey}`,
+          })
+        : null,
       song.countOff
         ? h("song-count-off", {}, [
             h("dt", { text: "Count off" }),

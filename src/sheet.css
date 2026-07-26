@@ -170,10 +170,53 @@ song-count-off dd {
   font-weight: 600;
 }
 
+/* Says on the printed page which instrument this part is written for, so a
+   transposed PDF is never mistaken for a concert one. */
+song-transposed {
+  display: block;
+  margin-top: 0.07in;
+  color: var(--ink-soft);
+  font-size: 9.5pt;
+  font-weight: 600;
+  text-align: center;
+  /* No text-transform: uppercasing "Bb" gives "BB", which reads as a different
+     pitch. Accidentals are case-sensitive, so this text must be left alone. */
+  letter-spacing: 0.02em;
+}
+
 song-head .note {
   margin: 0.08in 0 0;
   color: var(--ink-soft);
   font-size: 10pt;
+}
+
+/* ---------- screen-only controls ---------- */
+
+song-controls {
+  display: flex;
+  gap: 0.08in;
+  align-items: center;
+  justify-content: center;
+  padding: 0.12in;
+  color: #fff;
+  font-size: 10pt;
+}
+
+song-controls label {
+  font-weight: 600;
+}
+
+song-controls select {
+  padding: 0.03in 0.05in;
+  border: 0;
+  border-radius: 0.03in;
+  font: inherit;
+}
+
+@media print {
+  song-controls {
+    display: none;
+  }
 }
 
 /* ---------- sections ---------- */
