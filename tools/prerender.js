@@ -5,7 +5,7 @@
  * WeasyPrint (and any other non-browser PDF engine) cannot run JavaScript, so
  * checking real PDF output needs the DOM materialized ahead of time.
  *
- *   node tools/prerender.js songs/vibe-coding.json Bb > /tmp/chart.html
+ *   node tools/prerender.js songs/vibe-coding.sf.json Bb > /tmp/chart.html
  */
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";

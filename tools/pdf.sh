@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Render a song JSON to PDF and page PNGs for inspection.
 #
-#   tools/pdf.sh songs/vibe-coding.json
+#   tools/pdf.sh songs/start-here.sf.json
 #
 # Caveat: WeasyPrint is a useful smoke test, not the target renderer. Chrome's
 # "Save as PDF" is what players will actually use, and the two disagree on parts
@@ -9,9 +9,9 @@
 # check on content, borders, and pagination — not final typography.
 set -euo pipefail
 
-song="${1:-songs/vibe-coding.json}"
+song="${1:-songs/start-here.sf.json}"
 instrument="${2:-C}"
-name="$(basename "${song%.json}")"
+name="$(basename "${song%.json}")"; name="${name%.sf}"
 out="${TMPDIR:-/tmp}/sofo-$name-$instrument"
 
 node "$(dirname "$0")/prerender.js" "$song" "$instrument" > "$out.html"

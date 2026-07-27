@@ -359,7 +359,8 @@ class SongControls extends HTMLElement {
     const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${slug}.json`;
+    // .sf.json marks it as a sofo Song Form document — see AGENTS.md.
+    a.download = `${slug}.sf.json`;
     a.click();
     URL.revokeObjectURL(url);
   }

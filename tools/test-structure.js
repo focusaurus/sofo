@@ -38,7 +38,7 @@ const check = (actual, expected, what) => {
   console.log(`${ok ? "ok  " : "FAIL"} ${what}: ${brief(a)}${ok ? "" : ` (want ${brief(e)})`}`);
 };
 
-const song = normalizeSong(JSON.parse(readFileSync("songs/vibe-coding.json", "utf8")));
+const song = normalizeSong(JSON.parse(readFileSync("songs/vibe-coding.sf.json", "utf8")));
 const names = (s) => s.sections.map((x) => x.name);
 
 console.log("# Duplicating a section");

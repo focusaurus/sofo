@@ -59,7 +59,7 @@ check(kept.sections[0].notes, ["quiet"], "section notes survive");
 check(kept.title, "T", "top-level fields survive");
 
 console.log("\n# Round-tripping a real song is stable");
-const song = normalizeSong(JSON.parse(readFileSync("songs/vibe-coding.json", "utf8")));
+const song = normalizeSong(JSON.parse(readFileSync("songs/vibe-coding.sf.json", "utf8")));
 check(normalizeSong(song), song, "normalize is idempotent");
 
 console.log("\n# Paths address the values the renderer emits");
