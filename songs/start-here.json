@@ -1,0 +1,92 @@
+{
+  "title": "Start Here",
+  "artist": "The Sofo Demo Band",
+  "key": "C",
+  "groove": "Easy backbeat",
+  "time": "4/4",
+  "tempo": 96,
+  "countOff": "Drums: 4 on the hi-hat",
+  "notes": [
+    "One JSON file. Hit Edit and click anything; Save as PDF from your browser is the whole export."
+  ],
+  "updated": "2026-07-26T15:30:00Z",
+  "sections": [
+    {
+      "name": "intro",
+      "notes": ["The slanted mark means \"same chord as the bar before.\""],
+      "phrases": [{ "chords": ["C", "", "", ""] }, { "chords": ["Am7", "", "G/B", ""] }]
+    },
+    {
+      "name": "verse",
+      "notes": ["Section notes go here — cues, dynamics, whatever the band forgets."],
+      "phrases": [
+        {
+          "chords": ["C", "Am7", "Dm7", "G7"],
+          "lyrics": [
+            "Eight bars to a line and the lines never lie,",
+            "the words sit under the bars where they belong."
+          ]
+        },
+        {
+          "chords": ["C", "Am7", ["Dm7", "G7"], "C"],
+          "lyrics": [
+            "Two chords in one bar? Put a space in between.",
+            "Leave a bar empty and it holds what it had."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "chorus",
+      "phrases": [
+        {
+          "chords": ["F", "G7", "C", ""],
+          "lyrics": [
+            "Print it, prop it, stand it on the stand,",
+            "letter-size in color, still clear in gray."
+          ]
+        },
+        {
+          "chords": ["F", "G7", ["C", "Am7"], "G7"],
+          "lyrics": [
+            "Say the feel up top and the count-off too,",
+            "and the band knows the tune before the downbeat's through."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "verse",
+      "phrases": [
+        {
+          "chords": ["C", "Em7", "F", "G7"],
+          "lyrics": [
+            "The horn player squints and says \"what key is this?\"",
+            "Pick their pitch up top — the chart moves, the file doesn't.",
+            "Same name twice and the verses count themselves."
+          ]
+        },
+        {
+          "chords": ["C", "Em7", ["F", "G7"], "C"],
+          "lyrics": [
+            "Copy a section, change the very last bar,",
+            "that's how a second chorus earns its scar."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "outro",
+      "phrases": [
+        {
+          "chords": ["F", "G7", "C", ""],
+          "lyrics": ["Hit Edit when it's wrong, hit Undo when it's worse —"]
+        },
+        { "chords": ["G7", ""] }
+      ]
+    }
+  ],
+  "endNotes": [
+    "Hold the last C till the leader cuts it. Enter fills the next empty bar, Tab steps bar to bar, Ctrl+Z forgives."
+  ]
+}

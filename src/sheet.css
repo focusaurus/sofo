@@ -2,7 +2,10 @@
 
 @page {
   size: letter;
-  margin: 0.5in 0.5in 0.6in;
+  /* The bottom margin is deep enough to hold the repeating footer, which is
+     positioned down into it — content fills the area above and can never
+     collide with the revision date. */
+  margin: 0.45in 0.5in 0.6in;
 }
 
 /* Self-hosted so the exported PDF embeds them and renders identically on any
@@ -49,7 +52,7 @@
   --tint-outro: #ececec;
   --tint-other: #eeeeee;
 
-  --gap: 0.14in;
+  --gap: 0.12in;
 
   /* 0.75pt is exactly 1 CSS px at 96dpi and still lands on a whole device pixel
      when Chrome rasterizes for print, so hairlines never round away to nothing. */
@@ -89,7 +92,7 @@ song-sheet {
 
 song-head {
   display: block;
-  margin-bottom: 0.18in;
+  margin-bottom: 0.12in;
 }
 
 song-head h1 {
@@ -664,11 +667,12 @@ song-footer::before {
     -webkit-print-color-adjust: exact;
   }
 
-  /* Repeats on every printed page. */
+  /* Repeats on every printed page, sitting in the page's bottom margin so no
+     line of content can ever overlap it. */
   song-footer {
     position: fixed;
     right: 0;
-    bottom: 0;
+    bottom: -0.24in;
     margin-top: 0;
   }
 }

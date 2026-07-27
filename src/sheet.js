@@ -44,6 +44,8 @@ class SongSheet extends HTMLElement {
   set song(song) {
     this._song = normalizeSong(song);
     this.render();
+    // Distinct from songchange: nothing was edited, a document just arrived.
+    this.dispatchEvent(new CustomEvent("songload", { bubbles: true }));
   }
 
   get song() {
@@ -200,6 +202,24 @@ class SongControls extends HTMLElement {
       sheet.editing = true;
     });
 
+    // A hidden file input is the only way to get a native file picker; the
+    // visible button proxies to it.
+    const picker = document.createElement("input");
+    picker.type = "file";
+    picker.accept = "application/json,.json";
+    picker.hidden = true;
+    picker.addEventListener("change", () => {
+      const [file] = picker.files ?? [];
+      if (file) this.#openFile(file);
+      picker.value = ""; // so choosing the same file twice still fires
+    });
+
+    const open = document.createElement("button");
+    open.type = "button";
+    open.textContent = "Open…";
+    open.title = "Open a song JSON file (or drop one on the page)";
+    open.addEventListener("click", () => picker.click());
+
     const undo = document.createElement("button");
     undo.type = "button";
     undo.textContent = "Undo";
@@ -210,6 +230,21 @@ class SongControls extends HTMLElement {
     download.type = "button";
     download.textContent = "Download JSON";
     download.addEventListener("click", () => this.#download());
+
+    // Restoring is offered rather than automatic: silently replacing the file on
+    // disk with a stale draft would be a nasty surprise.
+    const restore = document.createElement("button");
+    restore.type = "button";
+    restore.textContent = "Restore draft";
+    restore.title = "Reload the unsaved edits held in this browser";
+    restore.hidden = true;
+    restore.addEventListener("click", () => {
+      const draft = this.#readDraft();
+      if (!draft) return;
+      sheet.replaceSong(draft);
+      restore.hidden = true;
+      this.#status("Restored unsaved draft");
+    });
 
     const status = document.createElement("span");
     status.className = "status";
@@ -234,8 +269,62 @@ class SongControls extends HTMLElement {
       this.#saveDraft();
     });
 
-    this.replaceChildren(fresh, label, select, edit, undo, download, status);
+    // Dropping a .json anywhere on the page opens it. dragover must be
+    // cancelled or the browser navigates to the file instead.
+    document.addEventListener("dragover", (event) => {
+      if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
+    });
+    document.addEventListener("drop", (event) => {
+      const [file] = event.dataTransfer?.files ?? [];
+      if (!file) return;
+      event.preventDefault();
+      this.#openFile(file);
+    });
+
+    this.replaceChildren(fresh, open, picker, label, select, edit, undo, download, restore, status);
     sync();
+
+    // Offer the draft once the sheet has its data, so "restore" means something.
+    const offerDraft = () => {
+      const draft = this.#readDraft();
+      restore.hidden = !draft || JSON.stringify(draft) === JSON.stringify(sheet.song);
+    };
+    if (sheet.song) offerDraft();
+    else sheet.addEventListener("songload", offerDraft, { once: true });
+  }
+
+  /**
+   * Load a song from a user-supplied file. Anything unreadable is reported and
+   * ignored rather than replacing the chart with a broken document.
+   */
+  async #openFile(file) {
+    let song;
+    try {
+      song = JSON.parse(await file.text());
+    } catch (error) {
+      alert(`${file.name} is not valid JSON.\n\n${error.message}`);
+      return;
+    }
+    if (!song || typeof song !== "object" || Array.isArray(song)) {
+      alert(`${file.name} does not look like a song document.`);
+      return;
+    }
+    if (!Array.isArray(song.sections)) {
+      // Not fatal — normalizeSong copes — but worth saying, since the likely
+      // cause is picking the wrong file.
+      const ok = confirm(`${file.name} has no "sections" list. Open it anyway?`);
+      if (!ok) return;
+    }
+    // Drafts are keyed by document, so an opened file gets its own slot rather
+    // than overwriting the draft of whatever was on screen.
+    this.sheet.dataset.src = file.name;
+    this.sheet.replaceSong(song);
+    this.#status(`Opened ${file.name}`);
+  }
+
+  #status(text) {
+    const status = this.querySelector(".status");
+    if (status) status.textContent = text;
   }
 
   /** Drafts live in localStorage so a refresh does not lose unsaved edits. */
@@ -248,6 +337,15 @@ class SongControls extends HTMLElement {
       localStorage.setItem(this.#draftKey, JSON.stringify(this.sheet.song));
     } catch {
       // Storage full or blocked; the download button is still the real save.
+    }
+  }
+
+  #readDraft() {
+    try {
+      const raw = localStorage.getItem(this.#draftKey);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null; // corrupt or unavailable storage is the same as no draft
     }
   }
 
