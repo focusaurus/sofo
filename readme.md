@@ -39,3 +39,7 @@ Look through the default song that is loaded in the app, the lyrics and notes gu
 - Automatic section numbering: verse 1, verse 2, chorus 1, etc
 - Notes supported at the top, in each section, and at the end.
 - Undo support
+
+## License
+
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International license. See LICENSE file for details.
