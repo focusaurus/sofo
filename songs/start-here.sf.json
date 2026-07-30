@@ -24,13 +24,13 @@
           "chords": ["C", "Am7", "Dm7", "G7"],
           "lyrics": [
             "Eight bars to a line and the lines never lie,",
-            "the words sit under the bars where they belong."
+            "the words sit under the phrases where they belong."
           ]
         },
         {
           "chords": ["C", "Am7", ["Dm7", "G7"], "C"],
           "lyrics": [
-            "Two chords in one bar? Put a space in between.",
+            "Two chords in one bar? Use an array.",
             "Leave a bar empty and it holds what it had."
           ]
         }
