@@ -152,6 +152,33 @@ class SongSheet extends HTMLElement {
 
 customElements.define("song-sheet", SongSheet);
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/**
+ * A pencil, drawn rather than typed: the emoji and the Unicode pencil glyphs
+ * render wildly differently across platforms, and half of them come out as a
+ * color emoji that cannot pick up the button's ink.
+ */
+function pencilIcon() {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.9");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  for (const d of [
+    "M4 20l1.1-4.1L16.6 4.4a2.2 2.2 0 013.1 3.1L8.1 18.9 4 20z", // body and tip
+    "M14.6 6.4l3.1 3.1", // ferrule, where the metal band sits
+  ]) {
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", d);
+    svg.append(path);
+  }
+  return svg;
+}
+
 /**
  * <song-controls for="sheet-id"> — screen-only chrome: instrument picker, edit
  * toggle, and JSON download. Never printed, so it cannot reach the PDF.
@@ -179,9 +206,12 @@ class SongControls extends HTMLElement {
     label.setAttribute("for", select.id);
     label.textContent = "Transpose for";
 
+    // The edit toggle is a pencil floating on the sheet's top-right corner
+    // rather than a button in this bar, so it sits where the document is.
     const edit = document.createElement("button");
     edit.type = "button";
-    edit.textContent = "Edit";
+    edit.className = "edit-toggle";
+    edit.append(pencilIcon());
     edit.addEventListener("click", () => {
       sheet.editing = !sheet.editing;
     });
@@ -252,7 +282,10 @@ class SongControls extends HTMLElement {
     // Editing is concert-pitch only, so the picker is unavailable in edit mode.
     const sync = () => {
       const on = sheet.editing;
-      edit.textContent = on ? "Done editing" : "Edit";
+      // Icon-only, so the accessible name and the tooltip carry the label.
+      const name = on ? "Done editing" : "Edit this song";
+      edit.setAttribute("aria-label", name);
+      edit.title = name;
       edit.setAttribute("aria-pressed", String(on));
       select.disabled = on;
       select.value = sheet.getAttribute("transpose") ?? "C";
@@ -281,7 +314,10 @@ class SongControls extends HTMLElement {
       this.#openFile(file);
     });
 
-    this.replaceChildren(fresh, open, picker, label, select, edit, undo, download, restore, status);
+    this.replaceChildren(fresh, open, picker, label, select, undo, download, restore, status);
+    // Lives on the sheet's wrapper, not in this bar. Falls back to the bar if
+    // the page is marked up without one, so the toggle can never go missing.
+    (sheet.closest("song-page") ?? this).append(edit);
     sync();
 
     // Offer the draft once the sheet has its data, so "restore" means something.

@@ -76,16 +76,70 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Wraps the sheet so the edit pencil can hang off its corner. Carries the
+   centering that used to live on song-sheet, which now fills it. */
+song-page {
+  position: relative;
+  display: block;
+  width: 8.5in;
+  max-width: 100%;
+  margin: 0.4in auto;
+}
+
 /* Screen preview mimics a sheet of Letter paper. */
 song-sheet {
   display: block;
   box-sizing: border-box;
   width: 8.5in;
   min-height: 11in;
-  margin: 0.4in auto;
   padding: 0.5in 0.5in 0.6in;
   background: var(--paper);
   box-shadow: 0 0.06in 0.3in rgb(0 0 0 / 35%);
+}
+
+/* Straddles the paper's top-right corner: half on the sheet, half on the page
+   background, so it reads as chrome laid over the document rather than part of
+   the chart. */
+.edit-toggle {
+  position: absolute;
+  top: -0.16in;
+  right: -0.16in;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.46in;
+  height: 0.46in;
+  padding: 0;
+  border: var(--hair) solid #b6c2da;
+  border-radius: 50%;
+  background: #fff;
+  color: #33415c;
+  box-shadow: 0 0.02in 0.08in rgb(0 0 0 / 30%);
+  cursor: pointer;
+}
+
+.edit-toggle:hover {
+  border-color: #5a7fd0;
+  background: #dfe9fb;
+}
+
+.edit-toggle svg {
+  display: block;
+  width: 0.24in;
+  height: 0.24in;
+}
+
+/* Pressed is the same green the old text button used, so edit mode still
+   announces itself with one unmistakable color. */
+.edit-toggle[aria-pressed="true"] {
+  border-color: #1f6f3f;
+  background: #1f6f3f;
+  color: #fff;
+}
+
+.edit-toggle[aria-pressed="true"]:hover {
+  background: #29844c;
 }
 
 /* ---------- head ---------- */
@@ -408,7 +462,8 @@ song-phrase:hover > .phrase-tools,
 }
 
 @media print {
-  song-controls {
+  song-controls,
+  .edit-toggle {
     display: none;
   }
 }
@@ -648,8 +703,10 @@ song-footer::before {
 @media print {
   html { background: none; }
 
+  song-page,
   song-sheet {
     width: auto;
+    max-width: none;
     min-height: 0;
     margin: 0;
     padding: 0;

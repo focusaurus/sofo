@@ -43,7 +43,12 @@
   </head>
   <body>
     <song-controls for="sheet"></song-controls>
-    <song-sheet id="sheet" data-src="songs/start-here.sf.json" transpose="C"></song-sheet>
+    <!-- song-page exists only to give the floating edit pencil something to
+         position against: it is the sheet's own top-right corner, not the
+         window's. -->
+    <song-page>
+      <song-sheet id="sheet" data-src="songs/start-here.sf.json" transpose="C"></song-sheet>
+    </song-page>
     <script type="module" src="src/sheet.js"></script>
   </body>
 </html>
