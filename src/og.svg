@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <title>sofo — song form notation</title>
+  <!-- Social preview card: the wordmark beside a miniature song sheet. The sheet
+       is schematic rather than real text — at this size real 11pt type would be
+       unreadable mush, so it shows the shapes a player recognizes (sections,
+       phrase bars split into measures, lyric lines under each phrase).
+
+       Type is set in Noto Sans because this file is rasterized once by
+       bin/icons.sh on a machine that has it; nothing here is loaded by a browser.
+       Phrase colors are the icon's saturated tints, not the sheet's pale print
+       ones, so the icon and this card read as the same brand. -->
+  <rect width="1200" height="630" fill="#6b7080"/>
+
+  <g fill="#fff" font-family="'Noto Sans', 'Source Sans 3', Helvetica, sans-serif">
+    <text x="80" y="258" font-size="150" font-weight="700" letter-spacing="-4">sofo</text>
+    <text x="80" y="326" font-size="46" font-weight="600" fill="#e6e9f1">song form notation</text>
+    <g font-size="27" fill="#ccd1dd">
+      <text x="80" y="410">Form, lyrics, chords, and notes —</text>
+      <text x="80" y="450">one page, readable from a stand.</text>
+    </g>
+    <text x="80" y="536" font-size="26" font-weight="700" fill="#fff" opacity="0.92">sofo.peterlyons.org</text>
+  </g>
+
+  <!-- The sheet. Drop shadow matches the screen preview's box-shadow. -->
+  <g>
+    <rect x="640" y="55" width="500" height="520" rx="8" fill="#000" opacity="0.28"
+          transform="translate(6 10)"/>
+    <rect x="640" y="55" width="500" height="520" rx="8" fill="#fff"/>
+
+    <!-- head: title, artist, and the hairline-bounded facts row -->
+    <rect x="768" y="86" width="244" height="24" rx="5" fill="#16181d"/>
+    <rect x="828" y="122" width="124" height="12" rx="4" fill="#b9bec9"/>
+    <g fill="#b9bec9">
+      <rect x="668" y="152" width="444" height="1"/>
+      <rect x="668" y="188" width="444" height="1"/>
+    </g>
+    <g fill="#4a5060">
+      <rect x="722" y="163" width="76" height="12" rx="4"/>
+      <rect x="822" y="163" width="60" height="12" rx="4"/>
+      <rect x="906" y="163" width="52" height="12" rx="4"/>
+    </g>
+
+    <!-- Three sections. Each frame holds two phrases: a colored measure bar cut
+         into four bars by hairlines, over its lyric line. -->
+    <g stroke="#b9bec9" stroke-width="1" fill="none">
+      <rect x="668" y="204" width="444" height="112" rx="10"/>
+      <rect x="668" y="328" width="444" height="112" rx="10"/>
+      <rect x="668" y="452" width="444" height="112" rx="10"/>
+    </g>
+    <g fill="#4a5060">
+      <rect x="682" y="216" width="72" height="15" rx="4"/>
+      <rect x="682" y="340" width="88" height="15" rx="4"/>
+      <rect x="682" y="464" width="64" height="15" rx="4"/>
+    </g>
+    <g fill="#b9bec9">
+      <rect x="1046" y="219" width="52" height="9" rx="3"/>
+      <rect x="1046" y="343" width="52" height="9" rx="3"/>
+      <rect x="1046" y="467" width="52" height="9" rx="3"/>
+    </g>
+
+    <g>
+      <rect x="682" y="240" width="210" height="42" rx="5" fill="#1f7f96"/>
+      <rect x="898" y="240" width="200" height="42" rx="5" fill="#1f7f96"/>
+      <rect x="682" y="364" width="210" height="42" rx="5" fill="#c2412f"/>
+      <rect x="898" y="364" width="200" height="42" rx="5" fill="#c2412f"/>
+      <rect x="682" y="488" width="210" height="42" rx="5" fill="#6f8c22"/>
+      <rect x="898" y="488" width="200" height="42" rx="5" fill="#6f8c22"/>
+    </g>
+    <!-- measure divisions -->
+    <g fill="#fff" opacity="0.55">
+      <rect x="734" y="240" width="1" height="42"/><rect x="787" y="240" width="1" height="42"/>
+      <rect x="840" y="240" width="1" height="42"/>
+      <rect x="948" y="240" width="1" height="42"/><rect x="998" y="240" width="1" height="42"/>
+      <rect x="1048" y="240" width="1" height="42"/>
+      <rect x="734" y="364" width="1" height="42"/><rect x="787" y="364" width="1" height="42"/>
+      <rect x="840" y="364" width="1" height="42"/>
+      <rect x="948" y="364" width="1" height="42"/><rect x="998" y="364" width="1" height="42"/>
+      <rect x="1048" y="364" width="1" height="42"/>
+      <rect x="734" y="488" width="1" height="42"/><rect x="787" y="488" width="1" height="42"/>
+      <rect x="840" y="488" width="1" height="42"/>
+      <rect x="948" y="488" width="1" height="42"/><rect x="998" y="488" width="1" height="42"/>
+      <rect x="1048" y="488" width="1" height="42"/>
+    </g>
+    <!-- lyric lines under each phrase -->
+    <g fill="#c8ccd6">
+      <rect x="686" y="292" width="182" height="9" rx="4"/>
+      <rect x="902" y="292" width="156" height="9" rx="4"/>
+      <rect x="686" y="416" width="196" height="9" rx="4"/>
+      <rect x="902" y="416" width="140" height="9" rx="4"/>
+      <rect x="686" y="540" width="168" height="9" rx="4"/>
+      <rect x="902" y="540" width="178" height="9" rx="4"/>
+    </g>
+  </g>
+</svg>

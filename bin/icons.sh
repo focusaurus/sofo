@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Regenerate every raster icon from src/icon.svg. Run after editing the SVG.
+# Regenerate every raster icon from src/icon.svg and the social preview image
+# from src/og.svg. Run after editing either SVG.
 #
 #   bin/icons.sh
 #
@@ -33,6 +34,11 @@ for s in 16 32 48; do
   rsvg-convert -w "$s" -h "$s" "$src" -o "$tmp/ico-$s.png"
 done
 magick "$tmp/ico-16.png" "$tmp/ico-32.png" "$tmp/ico-48.png" "$root/favicon.ico"
+
+# Social preview. 1200x630 is the size every crawler wants; it must be opaque
+# PNG or JPEG — several of them refuse SVG outright.
+rsvg-convert -w 1200 -h 630 "$root/src/og.svg" |
+  magick png:- -background "#6b7080" -alpha remove -alpha off "$root/icons/og.png"
 
 cd "$root"
 ls -l favicon.ico icons/*.png

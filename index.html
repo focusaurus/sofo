@@ -13,6 +13,32 @@
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
     <link rel="manifest" href="site.webmanifest" />
     <meta name="theme-color" content="#6b7080" />
+
+    <!-- Social previews. Crawlers do not resolve relative URLs reliably and never
+         run JS, so og:url and og:image are absolute and hardcoded to the canonical
+         host; update them together if the site ever moves. -->
+    <meta
+      name="description"
+      content="Song form documents: your song's form, lyrics, chords, and notes on one readable page, built for reading from a tablet or paper at rehearsals and gigs."
+    />
+    <link rel="canonical" href="https://sofo.peterlyons.org/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="sofo" />
+    <meta property="og:title" content="sofo — song form notation" />
+    <meta
+      property="og:description"
+      content="Your song's form, lyrics, chords, and notes on one readable page. Free, in your browser."
+    />
+    <meta property="og:url" content="https://sofo.peterlyons.org/" />
+    <meta property="og:image" content="https://sofo.peterlyons.org/icons/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="The sofo wordmark beside a song sheet showing three sections of colored phrase bars with lyrics."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="src/sheet.css" />
   </head>
   <body>
