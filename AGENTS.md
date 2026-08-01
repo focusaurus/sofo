@@ -237,6 +237,11 @@ use it to check pagination and content, not final typography. Chrome's
   character would print as an empty box. A test enforces this.
 - **The DOM is a projection of the data.** Editing writes through a `data-path`
   into the JSON and re-renders; nothing reads state back out of the DOM.
+- **Editors lie over their leaf, never replace it.** The control is an absolutely
+  positioned child of the element it edits, so the leaf keeps its box and its
+  place in the flow and opening an editor moves nothing on the page. Font and
+  alignment come by inheritance; the focus ring is an `outline`, which costs no
+  space. Anything that hides or unhooks the leaf brings the layout jump back.
 - **Print output carries no editing chrome.** Buttons and `data-*` editing
   attributes are emitted only in edit mode. A test enforces this too.
 - **Print-first units.** Inches and points, not pixels; hairlines are `0.75pt`

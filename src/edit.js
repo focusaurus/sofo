@@ -4,9 +4,16 @@
  * Rather than making the whole document contenteditable — which fights the flex
  * layout and invents its own markup — each editable leaf carries a `data-path`
  * naming its location in the song JSON and a `data-edit` kind saying how to edit
- * it. Clicking one swaps in a real form control sized to the element it replaces,
- * and committing writes back through the path. The song data stays the source of
- * truth; the DOM is only ever a projection of it.
+ * it. Clicking one lays a real form control *over* the leaf, and committing
+ * writes back through the path. The song data stays the source of truth; the DOM
+ * is only ever a projection of it.
+ *
+ * The control is a child of the leaf, absolutely positioned to cover it, rather
+ * than a replacement for it. That is what keeps the page still: the leaf stays in
+ * flow at exactly its old size, so opening an editor cannot resize the other bars
+ * in the row or shove the lyrics down, and the control inherits the leaf's font,
+ * size and alignment so the text does not move either. All that changes is that
+ * the leaf stops painting its own ink while the control sits on top of it.
  */
 
 /** Read a dotted path: getPath(song, "sections.2.phrases.1.chords.3") */
@@ -102,24 +109,75 @@ function fromText(kind, text, previous) {
 }
 
 /**
+ * Lay `control` over `host` so that opening it moves nothing.
+ *
+ * The control is absolutely positioned against the host's padding box, which is
+ * one padding inside where the host's own text starts — so it borrows the host's
+ * padding to put its text back on the same spot. Everything else it needs (font,
+ * size, weight, alignment) it inherits by virtue of being a child.
+ */
+function cover(host, control, multiline) {
+  const style = getComputedStyle(host);
+  const box = host.getBoundingClientRect();
+  const pad = (side) => parseFloat(style[`padding${side}`]) || 0;
+
+  // An inline leaf — a value inside a dd, say — is not a containing block for an
+  // absolute child and ignores min-width/min-height. inline-block fixes both and
+  // leaves the leaf's own metrics alone.
+  if (style.display === "inline") host.style.display = "inline-block";
+  // A leaf showing only its placeholder has no content of its own to hold the
+  // box open once the :empty rule stops matching, so pin the size it had.
+  if (box.width) host.style.minWidth = `${box.width}px`;
+  if (box.height) host.style.minHeight = `${box.height}px`;
+  host.classList.add("is-editing");
+  control.style.padding = `${pad("Top")}px ${pad("Right")}px ${pad("Bottom")}px ${pad("Left")}px`;
+  host.append(control);
+
+  if (!multiline) return;
+  // A textarea will not size to its text, so grow it by hand and let the leaf
+  // grow underneath it. Lyrics genuinely need the room, and a box that stretches
+  // as lines are added reads as the page making space rather than jumping.
+  const outer = style.boxSizing === "border-box"
+    ? (parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.borderBottomWidth) || 0)
+    : -(pad("Top") + pad("Bottom"));
+  const fit = () => {
+    control.style.height = "auto";
+    control.style.height = `${control.scrollHeight}px`;
+    host.style.minHeight = `${control.scrollHeight + outer}px`;
+  };
+  control.addEventListener("input", fit);
+  fit();
+}
+
+/**
  * Wire up click-to-edit on a <song-sheet>. Returns a teardown function.
  * The sheet must expose `song` and an `updateAt(path, value)` method.
  */
 export function attachEditing(sheet) {
   let open = null;
 
+  /** Take the control back off its leaf and hand the leaf its own box back. */
+  const restore = ({ control, host }) => {
+    control.remove();
+    host.classList.remove("is-editing");
+    for (const prop of ["display", "min-width", "min-height"]) {
+      host.style.removeProperty(prop);
+    }
+  };
+
   const close = (commit) => {
     if (!open) return;
-    const { control, host, path, kind, before } = open;
+    const current = open;
     open = null; // cleared first so the blur handler cannot re-enter
+    const { control, path, kind, before } = current;
     const after = commit ? fromText(kind, control.value, before) : before;
-    control.remove();
-    host.hidden = false;
+    restore(current);
+    // An edit that changed nothing needs no re-render: the leaf underneath the
+    // control was never touched, so it is already showing the right thing. Not
+    // re-rendering is also what stops a click-in-click-out from flashing the
+    // whole chart.
     if (commit && JSON.stringify(after) !== JSON.stringify(before)) {
       sheet.updateAt(path, after);
-    } else {
-      host.textContent = toText(kind, before) || "";
-      sheet.render();
     }
   };
 
@@ -170,12 +228,10 @@ export function attachEditing(sheet) {
       control.addEventListener("change", () => close(true));
     } else {
       control.value = toText(kind, before);
+      // The :empty placeholder rule stops matching the moment the control moves
+      // in, so the control has to carry the hint itself.
+      if (host.dataset.placeholder) control.placeholder = host.dataset.placeholder;
     }
-    if (multiline) control.rows = Math.max(2, control.value.split("\n").length);
-
-    // Match the box being replaced so the layout does not jump.
-    const box = host.getBoundingClientRect();
-    if (box.width) control.style.minWidth = `${Math.round(box.width)}px`;
 
     control.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
@@ -200,13 +256,12 @@ export function attachEditing(sheet) {
     });
     control.addEventListener("blur", () => close(true));
 
-    host.hidden = true;
-    host.after(control);
+    cover(host, control, multiline);
     open = { control, host, path, kind, before };
     control.focus();
     control.select?.();
     // Long charts scroll: keep the active measure on screen while typing.
-    control.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    host.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   };
 
   const onClick = (event) => {
@@ -226,8 +281,11 @@ export function attachEditing(sheet) {
     const host = event.target.closest?.("[data-path]");
     if (!host || !sheet.contains(host)) return;
     if (open?.host === host) return;
+    // Committing the open editor can re-render the chart out from under this
+    // element, so go back to the path for the leaf that was actually clicked.
+    const { path } = host.dataset;
     close(true);
-    openEditor(host);
+    openPath(path);
   };
 
   const onKeyDown = (event) => {

@@ -440,25 +440,62 @@ song-phrase:hover > .phrase-tools,
   font-weight: 600;
 }
 
+/* The editor lies over the leaf it edits rather than replacing it, so it takes
+   no part in the layout: opening one cannot resize the neighbouring bars in a
+   row or push a lyric line down. Font, size, weight and alignment all arrive by
+   inheritance from the leaf, and the ring is an outline — drawn outside the box,
+   costing no space — rather than a border. Padding is copied on from JS to match
+   whatever leaf this is. */
 .song-editor {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   box-sizing: border-box;
-  width: 100%;
-  padding: 0.02in 0.03in;
-  border: var(--hair) solid #5a7fd0;
+  margin: 0;
+  border: 0;
   border-radius: 0.02in;
+  outline: 1pt solid #5a7fd0;
+  outline-offset: 0;
   background: #fff;
   color: var(--ink);
   font: inherit;
-  resize: vertical;
+  text-align: inherit;
 }
 
-/* A bar's editor is centered like the chord symbol it replaces. */
+/* The leaf keeps its box and its place in the flow; it just stops painting while
+   the control covers it. Hiding it outright is what used to make the row jump. */
+song-sheet [data-path].is-editing {
+  position: relative;
+  outline: none;
+  color: transparent;
+}
+
+/* The simile mark draws itself rather than inheriting text color. */
+song-sheet [data-path].is-editing song-repeat {
+  visibility: hidden;
+}
+
+/* A bar's editor is centered like the chord symbol it covers, which centers by
+   flex rather than by text-align. */
 .song-editor[data-kind="bar"] {
   text-align: center;
 }
 
+/* Lyrics grow: the height is set from the content in JS, so the bottom edge has
+   to be free rather than pinned to the leaf's. */
 .song-editor[data-kind="lines"] {
-  font-family: var(--font-lyric);
+  bottom: auto;
+  overflow: hidden;
+  resize: none;
+}
+
+/* A dropdown cannot shrink to a leaf as small as the tempo marking, so it opens
+   at its own width over the top-left corner instead of stretching to fit. */
+.song-editor[data-kind="choice"] {
+  right: auto;
+  bottom: auto;
+  z-index: 3;
+  width: auto;
 }
 
 @media print {
