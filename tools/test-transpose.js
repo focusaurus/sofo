@@ -5,7 +5,14 @@
  * These are the cases where naive semitone math goes wrong, so they are worth
  * asserting rather than eyeballing in a PDF.
  */
-import { INSTRUMENTS, transposeChord, transposeKey, transposeNote } from "../src/transpose.js";
+import {
+  INSTRUMENTS,
+  transposeChord,
+  transposeKey,
+  transposeNote,
+  transposeSong,
+  writtenKey,
+} from "../src/transpose.js";
 
 let failures = 0;
 const check = (actual, expected, what) => {
@@ -59,6 +66,30 @@ check(transposeKey("F#m", eb), "D#m", "F# minor for Eb");
 console.log("\n# Double accidentals get respelled, not printed");
 check(transposeNote("G#", eb), "F", "G# up a M6 spells F, not E#");
 check(transposeNote("D#", bb), "F", "D# up a M2 spells F, not E#");
+
+console.log("\n# Guitar capo: the chart is written DOWN by the fret number");
+const capo = (fret) => INSTRUMENTS[`capo${fret}`].interval;
+check(transposeKey("Bb", capo(3)), "G", "Bb with capo 3 gives G shapes");
+check(transposeKey("F", capo(1)), "E", "F with capo 1 gives E shapes");
+check(transposeKey("Eb", capo(6)), "A", "Eb with capo 6 gives A shapes");
+check(transposeKey("A", capo(2)), "G", "A with capo 2 gives G shapes");
+check(transposeKey("Bbm", capo(1)), "Am", "minor keys keep their mode");
+check(transposeChord("Bbmaj7", capo(3)), "Gmaj7", "quality survives the capo");
+check(transposeChord("Eb/G", capo(3)), "C/E", "slash bass moves with the root");
+
+console.log("\n# Shape keys are spelled diatonically, like every other transposition");
+// Gb rather than F# because Bb down a major 3rd IS Gb — the sharp preference
+// only decides ambiguous respellings, it does not override the letter math.
+check(writtenKey("Bb", "capo4"), "Gb", "Bb capo 4 spells Gb");
+check(writtenKey("Ab", "capo1"), "G", "Ab capo 1 is G");
+check(writtenKey(null, "capo3"), null, "a song with no key has no shape key");
+
+console.log("\n# Capo transposes the whole song, and says so on the chart");
+const capoed = transposeSong({ key: "Bb", sections: [{ chords: ["Bb", ["Eb", "F7"]] }] }, "capo3");
+check(capoed.key, "G", "song key becomes the shape key");
+check(capoed.concertKey, "Bb", "the sounding key is kept for the printed banner");
+check(capoed.sections[0].chords[0], "G", "single-chord bar");
+check(capoed.sections[0].chords[1].join(" "), "C D7", "multi-chord bar");
 
 console.log(`\n${failures ? `${failures} FAILED` : "all passed"}`);
 process.exit(failures ? 1 : 0);

@@ -30,6 +30,44 @@ export const INSTRUMENTS = {
   F: { label: "F instruments", interval: [7, 4] }, // perfect 5th up — french horn, english horn
 };
 
+/**
+ * Guitar capo positions, in the same picker as the instruments: "which shapes do
+ * I play" is the guitarist's version of the question a horn player asks with
+ * "which key do I read".
+ *
+ * A capo raises everything the player fingers, so the chart has to be written
+ * DOWN by the fret number — the opposite direction from every instrument above.
+ * Capo 3 on a song in Bb gives G shapes, and G is what the chart shows.
+ *
+ * Stops at 7. Frets 1-5 are where nearly all real capo work happens, 7 is common
+ * enough to keep (G shapes at the 7th is a standard trick), and past that the
+ * frets are too cramped to be worth a menu entry.
+ */
+export const CAPO_MAX = 7;
+
+/** Fret -> [semitones, letterSteps] down. Indexed by fret, so 0 is unused. */
+const CAPO_INTERVALS = [
+  null,
+  [-1, -1], // minor 2nd
+  [-2, -1], // major 2nd
+  [-3, -2], // minor 3rd
+  [-4, -2], // major 3rd
+  [-5, -3], // perfect 4th
+  [-6, -4], // tritone
+  [-7, -4], // perfect 5th
+];
+
+for (let fret = 1; fret <= CAPO_MAX; fret++) {
+  INSTRUMENTS[`capo${fret}`] = {
+    label: `Capo ${fret}`,
+    interval: CAPO_INTERVALS[fret],
+    capo: fret,
+    // Guitar shape keys are sharp keys — E, A, D, G, B, F# — so an ambiguous
+    // pitch class should come out F# rather than Gb, unlike a horn chart.
+    preferFlats: false,
+  };
+}
+
 /** Accidental string to semitone offset: "bb" -> -2, "#" -> +1. */
 function accidentalOffset(accidental) {
   let offset = 0;
@@ -119,6 +157,17 @@ export function transposeKey(key, interval, opts) {
 }
 
 /**
+ * The key a player actually reads for this instrument or capo, or null when the
+ * song has no key to start from. Used to label the picker with the answer the
+ * player cares about ("Capo 3 — play in G") rather than the fret number alone.
+ */
+export function writtenKey(key, instrument) {
+  const spec = INSTRUMENTS[instrument];
+  if (!key || !spec) return null;
+  return transposeKey(key, spec.interval, { preferFlats: spec.preferFlats ?? true });
+}
+
+/**
  * A copy of the song with all harmony and the key transposed for the given
  * instrument. Concert pitch returns the song untouched.
  *
@@ -128,7 +177,7 @@ export function transposeKey(key, interval, opts) {
 export function transposeSong(song, instrument = "C") {
   const spec = INSTRUMENTS[instrument];
   if (!spec || instrument === "C") return song;
-  const opts = { preferFlats: true };
+  const opts = { preferFlats: spec.preferFlats ?? true };
   const { interval } = spec;
 
   const chords = (bar) =>

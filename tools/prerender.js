@@ -19,7 +19,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const [songPath, instrument = "C"] = process.argv.slice(2);
 if (!songPath) {
-  console.error("usage: node tools/prerender.js <song.json> [C|Bb|A|Eb|F]");
+  console.error("usage: node tools/prerender.js <song.json> [C|Bb|A|Eb|F|capo1..capo7]");
   process.exit(2);
 }
 

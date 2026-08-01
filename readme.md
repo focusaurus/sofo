@@ -36,6 +36,7 @@ Look through the default song that is loaded in the app, the lyrics and notes gu
 ## Whiz-bang features
 
 - Transposing! Enter your song in concert pitch and click to get variants for transposing instruments!
+- Guitar capo! Pick a capo position and the chart shows the shapes to play, labeled with the key each fret lands in.
 - Automatic section numbering: verse 1, verse 2, chorus 1, etc
 - Notes supported at the top, in each section, and at the end.
 - Undo support

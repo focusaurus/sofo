@@ -1,6 +1,6 @@
 import { createRenderer } from "./render.js";
 import { normalizeSong } from "./song.js";
-import { INSTRUMENTS, transposeSong } from "./transpose.js";
+import { INSTRUMENTS, transposeSong, writtenKey } from "./transpose.js";
 import { attachEditing, setPath } from "./edit.js";
 import { ACTIONS, blankSong } from "./structure.js";
 
@@ -191,12 +191,35 @@ class SongControls extends HTMLElement {
 
     const select = document.createElement("select");
     select.id = "transpose-select";
-    for (const [key, { label }] of Object.entries(INSTRUMENTS)) {
+
+    // Capo entries are grouped apart from the horns: a capo does not change the
+    // sounding pitch the way a transposing instrument does, it only changes the
+    // shapes, so the two are alternatives rather than things to combine.
+    const horns = document.createElement("optgroup");
+    horns.label = "Instrument";
+    const capos = document.createElement("optgroup");
+    capos.label = "Guitar capo";
+    for (const [key, spec] of Object.entries(INSTRUMENTS)) {
       const option = document.createElement("option");
       option.value = key;
-      option.textContent = key === "C" ? label : `${label} (${key})`;
-      select.append(option);
+      // Capo labels name the resulting key, which depends on the song, so
+      // labelCapos() fills them in once there is one.
+      option.textContent = spec.capo || key === "C" ? spec.label : `${spec.label} (${key})`;
+      (spec.capo ? capos : horns).append(option);
     }
+    select.append(horns, capos);
+
+    // A guitarist picks a capo by the shapes it gives them, so each entry names
+    // the key it lands in. Recomputed whenever the song's key can have changed.
+    const labelCapos = () => {
+      const key = sheet.song?.key;
+      for (const option of capos.children) {
+        const { capo } = INSTRUMENTS[option.value];
+        const shapes = writtenKey(key, option.value);
+        option.textContent = shapes ? `Capo ${capo} — play in ${shapes}` : `Capo ${capo}`;
+      }
+    };
+
     select.value = sheet.getAttribute("transpose") ?? "C";
     select.addEventListener("change", () => {
       sheet.transpose = select.value;
@@ -291,13 +314,16 @@ class SongControls extends HTMLElement {
       select.value = sheet.getAttribute("transpose") ?? "C";
       undo.hidden = !on;
       undo.disabled = !sheet.canUndo;
+      labelCapos();
       status.textContent = on
         ? "Editing in concert pitch · Enter fills the next empty bar · Tab steps bar to bar"
         : "";
     };
     sheet.addEventListener("editingchange", sync);
+    sheet.addEventListener("songload", labelCapos);
     sheet.addEventListener("songchange", () => {
       undo.disabled = !sheet.canUndo;
+      labelCapos(); // editing the key changes which shapes each fret gives
       status.textContent = `Saved locally · updated ${new Date().toLocaleTimeString()}`;
       this.#saveDraft();
     });

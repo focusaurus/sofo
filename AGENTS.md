@@ -132,8 +132,9 @@ finer than this — the format does not model beats.
 
 Anything unparseable passes through verbatim, so `"N.C."` is fine.
 
-**Always write concert pitch.** The app transposes for Bb/Eb/F/A instruments as a
-view; the file itself never changes.
+**Always write concert pitch.** The app transposes for Bb/Eb/F/A instruments — and
+for guitar capo positions 1-7, which move the chart the other way — as a view; the
+file itself never changes.
 
 ## Lyrics
 
@@ -224,7 +225,7 @@ use it to check pagination and content, not final typography. Chrome's
 | `src/sheet.js` | `<song-sheet>` and `<song-controls>` custom elements. |
 | `src/edit.js` | Click-to-edit leaves, keyboard bar entry. |
 | `src/structure.js` | Pure add/duplicate/move/delete operations. |
-| `src/transpose.js` | Diatonic transposition for Bb/Eb/F/A instruments. |
+| `src/transpose.js` | Diatonic transposition for Bb/Eb/F/A instruments and guitar capos. |
 | `songs/*.sf.json` | Song documents. |
 | `tools/` | Prerender, PDF check, tests. |
 
