@@ -1,0 +1,13 @@
+{
+  "name": "sofo — song form notation",
+  "short_name": "sofo",
+  "icons": [
+    { "src": "icons/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "icons/icon-512.png", "type": "image/png", "sizes": "512x512" },
+    { "src": "src/icon.svg", "type": "image/svg+xml", "sizes": "any" }
+  ],
+  "theme_color": "#6b7080",
+  "background_color": "#6b7080",
+  "display": "browser",
+  "start_url": "."
+}
