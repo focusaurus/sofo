@@ -1,4 +1,5 @@
 {
+  "$schema": "https://sofo.peterlyons.org/schema/sf-1.schema.json",
   "title": "Eight Bars To A Line",
   "artist": "The Vibe Coders",
   "key": "G",

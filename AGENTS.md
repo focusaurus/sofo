@@ -3,8 +3,11 @@
 Chord charts for bands who read chord symbols, not notation. A song is one JSON
 file; the browser renders it to a US-Letter page and "Save as PDF" is the export.
 
-**This document is the format spec.** It is written for agents converting existing
-charts (Google Docs, text files, memory) into sofo files.
+**This document is the prose spec**, written for agents converting existing charts
+(Google Docs, text files, memory) into sofo files. The machine-readable spec is
+[`schema/sf-1.schema.json`](schema/sf-1.schema.json) — a JSON Schema every song in
+`songs/` is validated against by `node tools/test-schema.js`. When the two
+disagree, the schema is right and this document needs fixing.
 
 ## File naming
 
@@ -16,10 +19,37 @@ Song documents use a **double extension**: `<slug>.sf.json`
 Examples: `start-here.sf.json`, `blame-it-on-the-boogie.sf.json`. Slugs are
 lowercase, hyphen-separated. Live in `songs/`.
 
+## Schema version
+
+Every document declares the format it follows in its own `$schema` member, first
+in the file:
+
+```json
+"$schema": "https://sofo.peterlyons.org/schema/sf-1.schema.json"
+```
+
+That is what makes the format evolvable: a chart that turns up on its own says
+which version it is, and an editor with schema support gives completion and
+validation from it. **Write it into every new file.** The app stamps it on load
+(`normalizeSong` in `src/song.js`), so any chart it saves carries it whether or
+not the original did — including files written before the field existed.
+
+Version 1 is dated `20260801`, recorded as `sofoSchemaVersion` and
+`sofoSchemaDate` in the schema itself.
+
+| Kind of change | What to do |
+| --- | --- |
+| New optional field, or a loosened constraint | Stay in version 1. Add it to the schema, bump `sofoSchemaDate`, document it here. Old readers ignore it; old files stay valid. |
+| Anything that makes an existing reader wrong — a field removed, renamed, retyped, or newly required | Ship `schema/sf-2.schema.json` alongside version 1, point `SCHEMA_URL` at it, and migrate in `normalizeSong` by reading the incoming `$schema`. Never edit a published version in place. |
+
+Old schema files stay served forever: a `$schema` URL that stops resolving is
+worse than no `$schema` at all.
+
 ## Quick example
 
 ```json
 {
+  "$schema": "https://sofo.peterlyons.org/schema/sf-1.schema.json",
   "title": "Start Here",
   "artist": "The Sofo Demo Band",
   "key": "C",
@@ -53,6 +83,7 @@ lowercase, hyphen-separated. Live in `songs/`.
 
 | Field | Type | Notes |
 | --- | --- | --- |
+| `$schema` | string | The format version. See [Schema version](#schema-version). |
 | `title` | string | Large, centered at the top. |
 | `artist` | string | Under the title. |
 | `key` | string | Concert pitch. `"C"`, `"Eb"`, `"Am"`, `"F#m"`. |
@@ -67,6 +98,9 @@ lowercase, hyphen-separated. Live in `songs/`.
 | `updated` | string | ISO 8601. The date shows in the page footer. The app rewrites this on every edit. |
 
 Every field except `sections` is optional; empty ones are simply not rendered.
+`$schema` is optional too — a hand-sketch without it still loads, and gains one on
+save — but files committed to `songs/` must carry it, which `tools/test-schema.js`
+enforces.
 
 ## Sections
 
@@ -204,10 +238,16 @@ emit the right number of empty bars (`["", "", "", ""]`) and add a note.
 ## Checking your work
 
 ```sh
-python3 -c "import json;json.load(open('songs/x.sf.json'))"   # valid JSON
+node tools/test-schema.js                                     # validates songs/ against the schema
 node tools/test-edit.js                                       # format + render
+node tools/test-structure.js                                  # structural edits
+node tools/test-transpose.js                                  # transposition and capos
 python3 -m http.server 8123                                   # then open /
 ```
+
+A song you have just written is checked with `node tools/test-schema.js` — it
+parses every file in `songs/` and validates it, so a typo'd field name or a chord
+that ended up a number is caught there rather than at the gig.
 
 `tools/pdf.sh songs/x.sf.json [C|Bb|Eb|F|A]` renders a PDF plus page PNGs via
 WeasyPrint. It takes a while and WeasyPrint is only an approximation of Chrome —
@@ -219,14 +259,16 @@ use it to check pagination and content, not final typography. Chrome's
 | Path | What |
 | --- | --- |
 | `index.html` | The app. Loads a song, renders it, offers editing. |
-| `src/song.js` | Data helpers: normalization, labels, tempo units. |
+| `src/song.js` | Data helpers: normalization, labels, tempo units. Holds `SCHEMA_URL` and stamps it on every song that loads. |
 | `src/render.js` | Song data → DOM. Pure projection, no event handlers. |
 | `src/sheet.css` | All styling. Print-first, sized in inches and points. |
 | `src/sheet.js` | `<song-sheet>` and `<song-controls>` custom elements. |
 | `src/edit.js` | Click-to-edit leaves, keyboard bar entry. |
 | `src/structure.js` | Pure add/duplicate/move/delete operations. |
 | `src/transpose.js` | Diatonic transposition for Bb/Eb/F/A instruments and guitar capos. |
+| `schema/sf-*.schema.json` | The format, as JSON Schema. One file per published version, never edited in place. |
 | `songs/*.sf.json` | Song documents. |
+| `tools/schema.js` | A dependency-free validator for the schema subset in use. |
 | `tools/` | Prerender, PDF check, tests. |
 
 ## Conventions worth preserving
@@ -237,6 +279,9 @@ use it to check pagination and content, not final typography. Chrome's
   character would print as an empty box. A test enforces this.
 - **The DOM is a projection of the data.** Editing writes through a `data-path`
   into the JSON and re-renders; nothing reads state back out of the DOM.
+- **A published schema version is immutable.** Documents in the wild point at a
+  version URL; changing what that URL means retroactively invalidates files
+  someone is reading off a tablet. Add a version instead, and migrate on load.
 - **Editors lie over their leaf, never replace it.** The control is an absolutely
   positioned child of the element it edits, so the leaf keeps its box and its
   place in the flow and opening an editor moves nothing on the page. Font and

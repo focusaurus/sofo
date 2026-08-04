@@ -1,4 +1,5 @@
 {
+  "$schema": "https://sofo.peterlyons.org/schema/sf-1.schema.json",
   "title": "Start Here",
   "artist": "The Sofo Demo Band",
   "key": "C",

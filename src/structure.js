@@ -12,6 +12,8 @@
  * bar, so duplication is a first-class operation rather than copy-paste.
  */
 
+import { SCHEMA_URL } from "./song.js";
+
 const clone = (value) => structuredClone(value);
 
 /** A fresh section: one 4-bar phrase, no chords yet. */
@@ -29,6 +31,8 @@ export function blankSection(name = "verse") {
  */
 export function blankSong() {
   return {
+    // First, so a saved file leads with what format it is.
+    $schema: SCHEMA_URL,
     title: "Untitled",
     artist: "",
     key: "",

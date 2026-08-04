@@ -2,6 +2,18 @@
  * Song data helpers. Pure functions over the JSON document — no DOM here.
  */
 
+/**
+ * The format this build reads and writes. Every document carries it in its own
+ * `$schema` member, so a file found on its own says which version it is — and an
+ * editor with schema support offers completion and validation from it.
+ *
+ * Versioning is by URL: a change that would make an older reader wrong ships as
+ * `sf-2.schema.json` alongside this one, and `normalizeSong` becomes the place
+ * that reads the incoming `$schema` and upgrades. Additive changes — a new
+ * optional field — stay in version 1 and bump `sofoSchemaDate` in the schema.
+ */
+export const SCHEMA_URL = "https://sofo.peterlyons.org/schema/sf-1.schema.json";
+
 /** Section names we know how to color and title-case. */
 export const SECTION_TYPES = [
   "intro",
@@ -62,9 +74,15 @@ export function sectionLabels(sections) {
  * which is why empty bars render blank rather than repeating the symbol.
  */
 export function phrasesOf(section) {
-  const raw = section.phrases ?? [
-    { chords: section.chords, bars: section.bars, lyrics: section.lyrics },
-  ];
+  // Only the shorthands the section actually used are copied onto the implied
+  // phrase: writing `lyrics: section.lyrics` unconditionally would leave an
+  // explicit `lyrics: undefined` behind on an instrumental section, which is a
+  // key the canonical shape does not have.
+  const implied = {};
+  for (const key of ["chords", "bars", "lyrics"]) {
+    if (section[key] !== undefined) implied[key] = section[key];
+  }
+  const raw = section.phrases ?? [implied];
   return raw.map((phrase, index) => {
     const chords = phrase.chords ?? [];
     const count = Math.max(chords.length, Number(phrase.bars) || 0);
@@ -88,10 +106,17 @@ export function phrasesOf(section) {
  *
  * Bars are stored as "" (continue previous chord), a single symbol, or an array
  * of symbols sharing the measure.
+ *
+ * This is also where the document's `$schema` is stamped: normalizing is the one
+ * gate every song passes through on the way in, so anything the app saves comes
+ * back out declaring the version it was written as. A future version bump reads
+ * the incoming value here and migrates before normalizing.
  */
 export function normalizeSong(song) {
+  const { $schema, ...rest } = song;
   return {
-    ...song,
+    $schema: SCHEMA_URL,
+    ...rest,
     sections: (song.sections ?? []).map((section) => {
       const { chords, bars, lyrics, ...rest } = section;
       return {

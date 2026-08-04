@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sofo.peterlyons.org/schema/sf-1.schema.json",
+  "sofoSchemaVersion": 1,
+  "sofoSchemaDate": "20260801",
+  "title": "sofo Song Form chart",
+  "description": "A chord chart for a band that reads chord symbols rather than notation: one JSON document per song, rendered to a US-Letter page. Documents name this schema in their own \"$schema\" member, which is how the format is versioned — a breaking change ships as sf-2.schema.json rather than by editing this file. The prose spec, with the conversion guidance an author needs, is AGENTS.md at the repo root.",
+  "type": "object",
+  "required": ["sections"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "description": "The version of this format the document follows. Files the app saves always carry it.",
+      "type": "string",
+      "const": "https://sofo.peterlyons.org/schema/sf-1.schema.json"
+    },
+    "title": {
+      "description": "Large, centered at the top of the page.",
+      "type": "string"
+    },
+    "artist": {
+      "description": "Printed under the title.",
+      "type": "string"
+    },
+    "key": {
+      "description": "Concert pitch, always — the app transposes for Bb/Eb/F/A instruments and guitar capos as a view, and never rewrites the file.",
+      "type": "string",
+      "examples": ["C", "Eb", "Am", "F#m"]
+    },
+    "time": {
+      "description": "Time signature. Empty means unset; 6/8, 9/8 and 12/8 are counted in dotted quarters unless tempoUnit says otherwise.",
+      "type": "string",
+      "pattern": "^(\\d+\\s*/\\s*\\d+)?$",
+      "examples": ["4/4", "6/8", "3/4"]
+    },
+    "tempo": {
+      "description": "BPM as a number. The empty string means unset, which is what a field cleared in the editor leaves behind.",
+      "oneOf": [{ "type": "number", "exclusiveMinimum": 0 }, { "const": "" }]
+    },
+    "tempoUnit": {
+      "description": "The note value the tempo counts, drawn as a metronome marking. Usually omitted: absent or empty means inferred from `time`. Set it only when the song contradicts that, such as a cut-time chart counted in half notes.",
+      "enum": ["half", "dotted-half", "quarter", "dotted-quarter", "eighth", ""]
+    },
+    "groove": {
+      "description": "The feel, in a few words: \"Blues shuffle\", \"Four-on-the-floor disco\". Renders on one line.",
+      "type": "string"
+    },
+    "feel": {
+      "description": "Accepted alias for `groove`, kept for hand-written files. `groove` wins when both are present.",
+      "type": "string"
+    },
+    "countOff": {
+      "description": "Who counts the band in, and how: \"Drums: 4 on the hi-hat\". Gets its own line.",
+      "type": "string"
+    },
+    "notes": {
+      "description": "How the song starts, and general reminders. Printed under the header, one paragraph per entry.",
+      "$ref": "#/$defs/lines"
+    },
+    "sections": {
+      "description": "The song, in playing order. Repeated sections are duplicated rather than referenced.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/section" }
+    },
+    "endNotes": {
+      "description": "How the song ends: endings, repeats, cues. Printed after the last section.",
+      "$ref": "#/$defs/lines"
+    },
+    "updated": {
+      "description": "ISO 8601. Shown in the page footer; the app rewrites it on every edit.",
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "lines": {
+      "description": "A block of prose as separate lines, each rendered on its own.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "section": {
+      "description": "One named part of the song. Numbering is automatic: reuse the same `name` and the labels become Verse 1, Verse 2 — never write \"verse 1\" yourself.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Section type, lowercase. Drives the label, the numbering and the background tint. intro, verse, prechorus, chorus, bridge, interlude, solo, breakdown, vamp and outro get their own tint; anything else renders neutral and still works.",
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "description": "Overrides the displayed name. Numbering still applies.",
+          "type": "string"
+        },
+        "notes": {
+          "description": "Cues and dynamics for this section, italic under the bars.",
+          "$ref": "#/$defs/lines"
+        },
+        "phrases": {
+          "description": "The canonical home for this section's harmony.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/phrase" }
+        },
+        "bars": {
+          "description": "Shorthand for hand-sketching: this many empty bars as a single phrase. Expanded to `phrases` on load.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "chords": {
+          "description": "Shorthand: these bars as a single phrase. Expanded to `phrases` on load.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/bar" }
+        },
+        "lyrics": {
+          "description": "Shorthand: moves onto this section's single phrase on load.",
+          "$ref": "#/$defs/lines"
+        }
+      }
+    },
+    "phrase": {
+      "description": "One musical line — conventionally 4 bars, sometimes 2 or 8. Phrases in a section sit side by side on one row, each as wide as its bar count, and wrap past 8 bars.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "chords": {
+          "description": "One entry per bar. This is what makes the phrase 4 bars long.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/bar" }
+        },
+        "lyrics": {
+          "description": "Lines of text under this phrase's bars. They only say which words go with which bars — no syllable or rhythm alignment.",
+          "$ref": "#/$defs/lines"
+        },
+        "bars": {
+          "description": "Shorthand: this many empty bars. Expanded into `chords` on load.",
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "bar": {
+      "description": "One measure, where the type carries the meaning: \"C\" is one chord for the bar, \"\" keeps playing the previous chord and renders as a simile mark, and [\"Dm7\", \"G7\"] is two chords sharing the measure. Harmonic rhythm is deliberately no finer than this — the format does not model beats. A chord symbol is root + quality + optional /bass (\"Abmaj7/Eb\"); anything unparseable prints verbatim, so \"N.C.\" is fine.",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      ]
+    }
+  }
+}
