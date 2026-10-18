@@ -3,6 +3,7 @@ import { normalizeSong } from "./song.js";
 import { INSTRUMENTS, transposeSong, writtenKey } from "./transpose.js";
 import { attachEditing, setPath } from "./edit.js";
 import { ACTIONS, blankSong } from "./structure.js";
+import { BINDINGS, GROUPS } from "./keys.js";
 
 /**
  * <song-sheet data-src="song.json" transpose="Bb" editing> renders a chart into
@@ -316,7 +317,7 @@ class SongControls extends HTMLElement {
       undo.disabled = !sheet.canUndo;
       labelCapos();
       status.textContent = on
-        ? "Editing in concert pitch · Enter fills the next empty bar · Tab steps bar to bar"
+        ? "Editing in concert pitch · arrows move, Enter edits a bar, ? lists the keys"
         : "";
     };
     sheet.addEventListener("editingchange", sync);
@@ -327,6 +328,12 @@ class SongControls extends HTMLElement {
       status.textContent = `Saved locally · updated ${new Date().toLocaleTimeString()}`;
       this.#saveDraft();
     });
+    // A keyboard command says what it did, and gets the last word: the edit it
+    // made has already fired songchange and set the line to "Saved locally".
+    sheet.addEventListener("songstatus", (event) => {
+      status.textContent = event.detail.text;
+    });
+    sheet.addEventListener("songhelp", () => this.#help());
 
     // Dropping a .json anywhere on the page opens it. dragover must be
     // cancelled or the browser navigates to the file instead.
@@ -409,6 +416,50 @@ class SongControls extends HTMLElement {
     } catch {
       return null; // corrupt or unavailable storage is the same as no draft
     }
+  }
+
+  /**
+   * The cheat sheet, built from the same table the dispatcher reads, so a key
+   * cannot be listed here and wired to something else. A <dialog> gets Escape,
+   * the backdrop and focus trapping from the platform.
+   */
+  #help() {
+    let dialog = this.querySelector(".key-help");
+    if (dialog) return dialog.showModal();
+
+    dialog = document.createElement("dialog");
+    dialog.className = "key-help";
+
+    const title = document.createElement("h2");
+    title.textContent = "Keyboard";
+    const intro = document.createElement("p");
+    intro.className = "key-help-intro";
+    intro.textContent =
+      "Chords are Enter, then type: committing a bar moves on to the next empty one, so a section goes in without touching the mouse. These keys work while no field is open.";
+    dialog.append(title, intro);
+
+    for (const group of GROUPS) {
+      const heading = document.createElement("h3");
+      heading.textContent = group;
+      const list = document.createElement("dl");
+      for (const binding of BINDINGS.filter((b) => b.group === group)) {
+        const key = document.createElement("dt");
+        key.textContent = binding.show;
+        const what = document.createElement("dd");
+        what.textContent = binding.label;
+        list.append(key, what);
+      }
+      dialog.append(heading, list);
+    }
+
+    const done = document.createElement("button");
+    done.type = "button";
+    done.textContent = "Close";
+    done.addEventListener("click", () => dialog.close());
+    dialog.append(done);
+
+    this.append(dialog);
+    dialog.showModal();
   }
 
   #download() {

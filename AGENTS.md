@@ -113,7 +113,7 @@ enforces.
 | `name` | string | Section type, lowercase. Drives the label, numbering, and color. |
 | `label` | string | Optional override for the displayed name. |
 | `notes` | string[] | Cues and dynamics, italic under the bars. |
-| `phrases` | Phrase[] | See below. |
+| `phrases` | Phrase[] | See below. At least one. |
 
 **Numbering is automatic.** Reuse the same `name` and sections number
 themselves: `verse`, `verse`, `chorus`, `verse` renders as `Verse 1`, `Verse 2`,
@@ -141,7 +141,7 @@ section read as two lines of four.
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `chords` | (string \| string[])[] | One entry **per bar**. |
+| `chords` | (string \| string[])[] | One entry **per bar**. At least one. |
 | `lyrics` | string[] | Lines of text under this phrase's bars. |
 
 ## Bars and chords
@@ -241,6 +241,7 @@ emit the right number of empty bars (`["", "", "", ""]`) and add a note.
 node tools/test-schema.js                                     # validates songs/ against the schema
 node tools/test-edit.js                                       # format + render
 node tools/test-structure.js                                  # structural edits
+node tools/test-keys.js                                       # key map + cursor movement
 node tools/test-transpose.js                                  # transposition and capos
 python3 -m http.server 8123                                   # then open /
 ```
@@ -263,7 +264,8 @@ use it to check pagination and content, not final typography. Chrome's
 | `src/render.js` | Song data → DOM. Pure projection, no event handlers. |
 | `src/sheet.css` | All styling. Print-first, sized in inches and points. |
 | `src/sheet.js` | `<song-sheet>` and `<song-controls>` custom elements. |
-| `src/edit.js` | Click-to-edit leaves, keyboard bar entry. |
+| `src/edit.js` | Click-to-edit leaves, the bar cursor, keyboard bar entry. |
+| `src/keys.js` | The keyboard map, as data — one table for the dispatcher and the cheat sheet. |
 | `src/structure.js` | Pure add/duplicate/move/delete operations. |
 | `src/transpose.js` | Diatonic transposition for Bb/Eb/F/A instruments and guitar capos. |
 | `schema/sf-*.schema.json` | The format, as JSON Schema. One file per published version, never edited in place. |
@@ -271,14 +273,51 @@ use it to check pagination and content, not final typography. Chrome's
 | `tools/schema.js` | A dependency-free validator for the schema subset in use. |
 | `tools/` | Prerender, PDF check, tests. |
 
+## Editing by keyboard
+
+Edit mode has two layers, and which one you are in is exactly whether a field is
+open. With one open, keys are text. With none open, a **cursor** — a dashed ring
+around one bar — is what the keys act on, and they can be bare letters because
+nothing is listening for typing. `?` shows the list, rendered from the same table
+that dispatches it (`src/keys.js`).
+
+The cursor is always exactly one bar, never a phrase or a section. Phrase and
+section commands walk up from it, which is why there is no cursor level to select
+or display. Field edits are excursions: they leave the cursor where it was, so the
+bar stays home.
+
+**Chords are `Enter`, then type.** Committing a bar auto-advances into the next
+empty one, so a section goes in as `Enter G ⏎ C ⏎ Am7 ⏎` without touching the
+mouse. **A–G are not chord shortcuts** — they are jump keys — and that is the one
+thing about this map worth saying out loud to a new user.
+
+Two rules generate the rest:
+
+- **A letter names a thing, never an action.** `b` is "bar", `p` "phrase", `s`
+  "section"; each does the same thing to its own noun.
+- **Shift means remove.** Only the three structural nouns use it, so a shifted key
+  never means anything else.
+
+Deletions are not confirmed — undo is 50 deep and the status line names what went.
+
 ## Conventions worth preserving
 
 - **Glyphs are drawn, not typed.** The simile mark, the duplicate icon and the
   tempo note value are inline SVG because `♩` (U+2669) and the Musical Symbols
   block are missing from Noto Sans, Source Sans, DejaVu and Liberation — a
   character would print as an empty box. A test enforces this.
+- **Every container keeps at least one child.** A phrase never drops below one
+  bar, a section below one phrase, a song below one section — enforced in
+  `src/structure.js` and by the schema. The reason is reachability, not tidiness:
+  a phrase with no bars is not drawn, and a section with no phrases draws only its
+  heading, with no toolbar to add one and no bar for the cursor to land on.
+  Deleting a parent is always still allowed, so no minimum ever traps anyone.
 - **The DOM is a projection of the data.** Editing writes through a `data-path`
   into the JSON and re-renders; nothing reads state back out of the DOM.
+- **The key map is one table.** `src/keys.js` is read by both the dispatcher and
+  the cheat sheet, so a key cannot be documented as one thing and wired to
+  another. A test checks every structural binding names a real `ACTIONS` entry and
+  that no action is unreachable by keyboard.
 - **A published schema version is immutable.** Documents in the wild point at a
   version URL; changing what that URL means retroactively invalidates files
   someone is reading off a tablet. Add a version instead, and migrate on load.

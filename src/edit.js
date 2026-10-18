@@ -14,7 +14,15 @@
  * in the row or shove the lyrics down, and the control inherits the leaf's font,
  * size and alignment so the text does not move either. All that changes is that
  * the leaf stops painting its own ink while the control sits on top of it.
+ *
+ * Keyboard work happens in two layers, and which one you are in is exactly
+ * whether an editor is open. With one open, keys are text. With none open, the
+ * cursor — a ring around one bar — is what the keys act on, and they can be bare
+ * letters because nothing is listening for typing. See src/keys.js for the map.
  */
+
+import { findBinding } from "./keys.js";
+import { sectionLabels } from "./song.js";
 
 /** Read a dotted path: getPath(song, "sections.2.phrases.1.chords.3") */
 export function getPath(root, path) {
@@ -51,6 +59,65 @@ export function stepBarPath(song, path, delta = 1) {
   const index = paths.indexOf(path);
   if (index < 0) return null;
   return paths[index + delta] ?? null;
+}
+
+/** Pull the indexes back out of a bar path, or null if it is not one. */
+export function barAt(path) {
+  const m = /^sections\.(\d+)\.phrases\.(\d+)\.chords\.(\d+)$/.exec(path ?? "");
+  if (!m) return null;
+  const [, section, phrase, bar] = m.map(Number);
+  return { section, phrase, bar };
+}
+
+/** Every phrase's path, in reading order across the whole chart. */
+export function phrasePaths(song) {
+  const paths = [];
+  (song.sections ?? []).forEach((section, s) => {
+    (section.phrases ?? []).forEach((_, p) => paths.push(`sections.${s}.phrases.${p}`));
+  });
+  return paths;
+}
+
+/**
+ * The bar one phrase away, holding the position within the phrase: down from bar
+ * 3 of a four-bar line lands on bar 3 of the next line, which is what "down" looks
+ * like on a chart where a phrase is a row. A shorter phrase clamps to its last
+ * bar, and a phrase with no bars is stepped over — it is not drawn, so a cursor
+ * could not be seen there.
+ */
+export function stepPhraseBarPath(song, path, delta = 1) {
+  const at = barAt(path);
+  if (!at) return null;
+  const paths = phrasePaths(song);
+  const from = paths.indexOf(`sections.${at.section}.phrases.${at.phrase}`);
+  if (from < 0) return null;
+  for (let i = from + delta; i >= 0 && i < paths.length; i += Math.sign(delta)) {
+    const bars = getPath(song, `${paths[i]}.chords`) ?? [];
+    if (bars.length) return `${paths[i]}.chords.${Math.min(at.bar, bars.length - 1)}`;
+  }
+  return null;
+}
+
+/**
+ * The bar to hold the cursor on after the chart changed under it. An existing
+ * path stays put; a deleted one falls back to the last bar still in front of
+ * where it was, which keeps a run of deletes moving backwards through the chart
+ * rather than jumping to the top.
+ */
+export function nearestBarPath(song, path) {
+  const paths = barPaths(song);
+  if (!paths.length) return null;
+  if (paths.includes(path)) return path;
+  const gone = barAt(path);
+  if (!gone) return paths[0];
+  const earlier = (a, b) =>
+    a.section !== b.section
+      ? a.section < b.section
+      : a.phrase !== b.phrase
+        ? a.phrase < b.phrase
+        : a.bar < b.bar;
+  const behind = paths.filter((p) => earlier(barAt(p), gone));
+  return behind.at(-1) ?? paths[0];
 }
 
 /** True when a bar holds no chord — a continuation, shown as the simile mark. */
@@ -155,6 +222,41 @@ function cover(host, control, multiline) {
  */
 export function attachEditing(sheet) {
   let open = null;
+  /**
+   * The cursor: the path of the bar the keyboard is aimed at, or null for none.
+   *
+   * A bar is the only thing it can be. Phrase and section commands read their
+   * target by walking up from here, which is why there is no notion of a cursor
+   * level to keep in sync or to show. Field edits — the title, a lyric — are
+   * excursions that leave it where it was, so the bar stays home.
+   *
+   * It is a path rather than an element because every edit re-renders the whole
+   * chart; an element reference would be stale one keystroke later.
+   */
+  let cursor = null;
+
+  const leafAt = (path) => (path ? sheet.querySelector(`[data-path="${path}"]`) : null);
+
+  /** Draw the cursor. Called after every re-render, since the DOM is rebuilt. */
+  const paintCursor = () => {
+    for (const marked of sheet.querySelectorAll(".is-cursor")) marked.classList.remove("is-cursor");
+    const host = leafAt(cursor);
+    host?.classList.add("is-cursor");
+    return host;
+  };
+
+  const setCursor = (path, { scroll = true } = {}) => {
+    cursor = path ?? null;
+    const host = paintCursor();
+    if (host && scroll) host.scrollIntoView({ block: "nearest", inline: "nearest" });
+    return Boolean(host);
+  };
+
+  /** After a structural change, keep the cursor on a bar that still exists. */
+  const followSong = () => {
+    if (cursor) cursor = nearestBarPath(sheet.song, cursor);
+    paintCursor();
+  };
 
   /** Take the control back off its leaf and hand the leaf its own box back. */
   const restore = ({ control, host }) => {
@@ -183,7 +285,7 @@ export function attachEditing(sheet) {
 
   /** Re-find a leaf by path after a re-render and start editing it. */
   const openPath = (path) => {
-    const host = sheet.querySelector(`[data-path="${path}"]`);
+    const host = leafAt(path);
     if (host) openEditor(host);
     return Boolean(host);
   };
@@ -206,6 +308,9 @@ export function attachEditing(sheet) {
   const openEditor = (host) => {
     const { path, edit: kind } = host.dataset;
     if (!path || open) return;
+    // Editing a bar is where the cursor lives; editing a field is an excursion,
+    // so the cursor stays on the bar the excursion started from.
+    if (kind === "bar") setCursor(path, { scroll: false });
     const before = getPath(sheet.song, path);
     const multiline = kind === "lines";
     const choices = kind === "choice" ? parseChoices(host.dataset.choices) : null;
@@ -288,21 +393,138 @@ export function attachEditing(sheet) {
     openPath(path);
   };
 
+  /**
+   * The verbs the key map is written against. Movement with no cursor yet seeds
+   * one at whichever end you are heading away from, so the first arrow press
+   * always lands somewhere rather than doing nothing.
+   */
+  const commands = {
+    moveBar: (delta) => {
+      if (!cursor) return delta > 0 ? commands.firstBar() : commands.lastBar();
+      setCursor(stepBarPath(sheet.song, cursor, delta) ?? cursor);
+    },
+    movePhrase: (delta) => {
+      if (!cursor) return delta > 0 ? commands.firstBar() : commands.lastBar();
+      setCursor(stepPhraseBarPath(sheet.song, cursor, delta) ?? cursor);
+    },
+    firstBar: () => setCursor(barPaths(sheet.song)[0]),
+    lastBar: () => setCursor(barPaths(sheet.song).at(-1)),
+    edit: () => openPath(cursor),
+    dropCursor: () => setCursor(null),
+
+    /** Hand the bar back to the chord before it, as the simile mark. */
+    clearBar: () => {
+      if (isBlankBar(sheet.song, cursor)) return;
+      sheet.updateAt(cursor, "");
+      announce("Bar cleared — u to undo");
+    },
+
+    undo: () => {
+      if (!sheet.undo()) announce("Nothing left to undo");
+    },
+
+    /**
+     * Run one of the structural operations the toolbar buttons use, aimed at the
+     * cursor's own phrase and section. `describe` is read before the change, so
+     * the message can name a section that no longer exists.
+     */
+    act: (action) => {
+      const at = barAt(cursor);
+      if (!at) return;
+      const said = describe(action, at);
+      // Every structural op returns the song untouched when the target is out of
+      // range — the last bar of a phrase, a section already at the top — and the
+      // sheet then swaps in nothing. Same object, so nothing happened, so say so
+      // rather than reporting a move that did not occur.
+      const before = sheet.song;
+      sheet.applyAction(action, { section: at.section, phrase: at.phrase });
+      announce(sheet.song === before ? "Nothing to change there" : said);
+    },
+
+    /**
+     * Open a field's editor without moving the cursor. `resolve` gets the cursor's
+     * section and phrase plus the song, which is all any target needs.
+     */
+    jump: (resolve) => {
+      const at = { ...(barAt(cursor) ?? {}), song: sheet.song };
+      if (!openPath(resolve(at))) announce("Nothing there to edit");
+    },
+
+    help: () => sheet.dispatchEvent(new CustomEvent("songhelp", { bubbles: true })),
+  };
+
+  /** Say what a structural key did, since some of it happens off screen. */
+  const describe = (action, at) => {
+    const section = getPath(sheet.song, `sections.${at.section}`);
+    const name = sectionLabels(sheet.song.sections ?? [])[at.section] ?? section?.name ?? "section";
+    const bars = getPath(sheet.song, `sections.${at.section}.phrases.${at.phrase}.chords`) ?? [];
+    return {
+      "bar-add": `Added a bar — ${bars.length + 1} in this phrase`,
+      "bar-remove": `Removed a bar — ${Math.max(1, bars.length - 1)} left in this phrase`,
+      "phrase-add": "Added a phrase",
+      "phrase-delete": "Deleted a phrase — u to undo",
+      "phrase-duplicate": "Duplicated the phrase",
+      "phrase-left": "Moved the phrase left",
+      "phrase-right": "Moved the phrase right",
+      "section-add": "Added a section",
+      "section-delete": `Deleted ${name} — u to undo`,
+      "section-duplicate": `Duplicated ${name}`,
+      "section-up": `Moved ${name} up`,
+      "section-down": `Moved ${name} down`,
+    }[action] ?? "";
+  };
+
+  const announce = (text) => {
+    if (!text) return;
+    sheet.dispatchEvent(new CustomEvent("songstatus", { bubbles: true, detail: { text } }));
+  };
+
+  /**
+   * True when the keystroke belongs to something else: the open editor, a control
+   * in the chrome around the sheet, or the cheat sheet itself — a modal dialog
+   * owns every key while it is up, including the `?` that opened it. Bare keys
+   * are only commands when nothing on screen is waiting to be typed into.
+   */
+  const isTypingTarget = (target) =>
+    Boolean(
+      target?.closest?.(
+        ".song-editor, input, select, textarea, button, dialog, [contenteditable]",
+      ),
+    );
+
   const onKeyDown = (event) => {
+    if (isTypingTarget(event.target) || document.querySelector("dialog[open]")) return;
     // Structural edits are destructive enough to need an escape hatch, and the
     // shortcut has to work while focus is on the document rather than a field.
-    const inField = event.target.closest?.(".song-editor");
-    if (!inField && (event.metaKey || event.ctrlKey) && event.key === "z") {
+    if ((event.metaKey || event.ctrlKey) && event.key === "z") {
       event.preventDefault();
       sheet.undo();
+      return;
     }
+    const binding = findBinding(event);
+    if (!binding) return;
+    // A binding that needs a cursor and has none is not a command at all, so the
+    // key keeps its normal meaning rather than being swallowed.
+    if (binding.needsCursor && !cursor) return;
+    event.preventDefault();
+    binding.run(commands);
   };
 
   sheet.addEventListener("click", onClick);
+  // Every commit re-renders, which throws away the element the cursor was drawn
+  // on; songchange is the one signal every path through the sheet emits.
+  sheet.addEventListener("songchange", followSong);
   document.addEventListener("keydown", onKeyDown);
+  // Edit mode is usually entered by clicking a button, which leaves the focus on
+  // that button and every bare key belonging to it. Hand the keys to the chart.
+  if (document.activeElement?.closest?.("song-controls, .edit-toggle")) {
+    document.activeElement.blur();
+  }
   return () => {
     close(false);
+    setCursor(null);
     sheet.removeEventListener("click", onClick);
+    sheet.removeEventListener("songchange", followSong);
     document.removeEventListener("keydown", onKeyDown);
   };
 }

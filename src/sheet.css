@@ -318,18 +318,28 @@ song-controls .status {
 
 /* ---------- editing affordances ---------- */
 
-/* Editable leaves get a hover target only in edit mode; the printed document
-   and the read-only view carry no editing chrome at all. */
+/* Three states, one visual channel each, so no two of them can be mistaken for
+   the same thing:
+     hover  — a fill, and the I-beam pointer. "You could edit this."
+     cursor — a ring, no fill. "The keyboard is aimed here."
+     open   — a solid ring and a white field. "You are editing this."
+   Hover deliberately has no ring: the mouse already says where it is, and a
+   second dashed outline following the pointer reads as a second keyboard focus.
+   None of the three changes the box, so nothing moves as they come and go. */
 song-sheet[editing] [data-path] {
   border-radius: 0.02in;
-  outline: var(--hair) dashed transparent;
-  outline-offset: 0.01in;
   cursor: text;
 }
 
 song-sheet[editing] [data-path]:hover {
-  outline-color: #5a7fd0;
   background: #eef3fd;
+}
+
+/* The one bar the keyboard is aimed at. Dashed where an open editor is solid,
+   and drawn as an outline for the same reason: it costs no layout. */
+song-sheet[editing] [data-path].is-cursor:not(.is-editing) {
+  outline: 1.25pt dashed #3f62b0;
+  outline-offset: 0.01in;
 }
 
 /* Empty fields need to be clickable, so they show their label instead of
@@ -498,8 +508,83 @@ song-sheet [data-path].is-editing song-repeat {
   width: auto;
 }
 
+/* ---------- the cheat sheet ---------- */
+
+/* Screen chrome, not paper: sized in rem and px rather than the inches the chart
+   uses, because none of it is ever printed. */
+.key-help {
+  max-width: 34rem;
+  max-height: 84vh;
+  padding: 1.25rem 1.5rem;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 8px 40px rgb(0 0 0 / 35%);
+  color: var(--ink);
+  font-family: var(--font-ui, system-ui, sans-serif);
+  font-size: 10pt;
+}
+
+.key-help::backdrop {
+  background: rgb(20 26 40 / 45%);
+}
+
+.key-help h2 {
+  margin: 0 0 0.4rem;
+  font-size: 13pt;
+}
+
+.key-help h3 {
+  margin: 1rem 0 0.35rem;
+  color: var(--ink-soft);
+  font-size: 8.5pt;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.key-help-intro {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+/* Two columns: the key, then what it does. */
+.key-help dl {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 0.3rem 0.75rem;
+  margin: 0;
+  align-items: baseline;
+}
+
+.key-help dt {
+  padding: 0.1rem 0.35rem;
+  border: 1px solid #c4cede;
+  border-radius: 4px;
+  background: #f4f7fd;
+  font-family: ui-monospace, monospace;
+  font-size: 9pt;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.key-help dd {
+  margin: 0;
+}
+
+.key-help button {
+  margin-top: 1.25rem;
+  padding: 0.35rem 1rem;
+  border: 1px solid #b6c2da;
+  border-radius: 4px;
+  background: #f4f7fd;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
 @media print {
   song-controls,
+  .key-help,
   .edit-toggle {
     display: none;
   }

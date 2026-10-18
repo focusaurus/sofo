@@ -103,6 +103,25 @@ check(barCount(removeBar(song, 2, 0).sections[2]), 3, "bar count follows");
 const oneBar = { sections: [{ name: "vamp", phrases: [{ chords: ["C"] }] }] };
 check(removeBar(oneBar, 0, 0).sections[0].phrases[0].chords, ["C"], "never removes the last bar");
 
+// Every container keeps at least one child, because the UI has no way back out of
+// the empty states: an empty phrase is not drawn at all, and an empty section
+// draws only its heading — no phrase toolbar, and no bar for the cursor to reach.
+console.log("\n# Containers never empty out");
+const one = {
+  sections: [{ name: "vamp", phrases: [{ chords: ["C", "F"] }] }],
+};
+check(deletePhrase(one, 0, 0), one, "never deletes a section's last phrase");
+check(deleteSection(one, 0), one, "never deletes a song's last section");
+check(deletePhrase(one, 0, 0).sections[0].phrases.length, 1, "the phrase is still there");
+// The parent can always still go, so a minimum never traps anything.
+const two = duplicatePhrase(one, 0, 0);
+check(deletePhrase(two, 0, 0).sections[0].phrases.length, 1, "the second-to-last phrase goes normally");
+check(deleteSection(addSection(one, 0), 0).sections.length, 1, "and so does a section, once there are two");
+// A no-op returns the song by identity, which is what tells the UI nothing
+// happened — the keyboard reports "Nothing to change there" off exactly this.
+check(deletePhrase(one, 0, 0) === one, true, "a refused delete returns the same object");
+check(deleteSection(one, 0) === one, true, "so the caller can tell it did nothing");
+
 console.log("\n# A new blank song");
 const fresh = blankSong();
 check(fresh.title, "Untitled", "has a title to click on");

@@ -10,6 +10,18 @@
  * Repetition with variation is the point of the format: the normal way to write
  * a second chorus that ends differently is to duplicate the first and change one
  * bar, so duplication is a first-class operation rather than copy-paste.
+ *
+ * **Every container keeps at least one child**: a phrase never drops below one
+ * bar, a section below one phrase, or a song below one section. This is not
+ * tidiness — it is that the UI has no way back out of the empty states. A phrase
+ * with no bars is not drawn at all (phraseRows skips it), and a section with no
+ * phrases draws only its heading, with no phrase toolbar to add one and no bar
+ * for the keyboard cursor to land on. Deleting the last child would strand
+ * content that could only be recovered by deleting its parent too. Emptying a
+ * song would also contradict the schema, which requires one section.
+ *
+ * Deleting the parent is always still allowed, so nothing here traps anyone —
+ * except at the very top, where "start over" is the New song button.
  */
 
 import { SCHEMA_URL } from "./song.js";
@@ -65,7 +77,7 @@ export function duplicateSection(song, index) {
 
 export function deleteSection(song, index) {
   const sections = sectionsOf(song);
-  if (!sections[index]) return song;
+  if (!sections[index] || sections.length <= 1) return song;
   sections.splice(index, 1);
   return withSections(song, sections);
 }
@@ -98,7 +110,7 @@ export function duplicatePhrase(song, sectionIndex, phraseIndex) {
 export function deletePhrase(song, sectionIndex, phraseIndex) {
   const sections = sectionsOf(song);
   const phrases = sections[sectionIndex]?.phrases;
-  if (!phrases?.[phraseIndex]) return song;
+  if (!phrases?.[phraseIndex] || phrases.length <= 1) return song;
   phrases.splice(phraseIndex, 1);
   return withSections(song, sections);
 }

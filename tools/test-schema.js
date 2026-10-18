@@ -83,6 +83,11 @@ const bad = [
   ["notes as one string", { sections: [{ name: "verse" }], notes: "watch the stop" }],
   ["a chord that is not a string", { sections: [{ name: "verse", chords: [7] }] }],
   ["an empty split bar", { sections: [{ name: "verse", chords: [[]] }] }],
+  // Every container keeps one child: these three are exactly the states the
+  // editor refuses to create, because it offers no way back out of them.
+  ["a section with no phrases", { sections: [{ name: "verse", phrases: [] }] }],
+  ["a phrase with no bars", { sections: [{ name: "verse", phrases: [{ chords: [] }] }] }],
+  ["a section with no bars at all", { sections: [{ name: "verse", chords: [] }] }],
   ["a wrong $schema", { $schema: "http://example.com/nope", sections: [{ name: "verse" }] }],
 ];
 for (const [what, doc] of bad) {

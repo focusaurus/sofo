@@ -58,7 +58,7 @@
       "$ref": "#/$defs/lines"
     },
     "sections": {
-      "description": "The song, in playing order. Repeated sections are duplicated rather than referenced.",
+      "description": "The song, in playing order. Repeated sections are duplicated rather than referenced. At least one — every container in this format keeps one child, because the editor offers no way back out of an empty one.",
       "type": "array",
       "minItems": 1,
       "items": { "$ref": "#/$defs/section" }
@@ -99,8 +99,9 @@
           "$ref": "#/$defs/lines"
         },
         "phrases": {
-          "description": "The canonical home for this section's harmony.",
+          "description": "The canonical home for this section's harmony. At least one: a section with no phrases renders as a bare heading with no way to add bars back to it, so the editor will not produce one.",
           "type": "array",
+          "minItems": 1,
           "items": { "$ref": "#/$defs/phrase" }
         },
         "bars": {
@@ -109,8 +110,9 @@
           "minimum": 1
         },
         "chords": {
-          "description": "Shorthand: these bars as a single phrase. Expanded to `phrases` on load.",
+          "description": "Shorthand: these bars as a single phrase. Expanded to `phrases` on load. At least one, like the phrase-level `chords` it becomes.",
           "type": "array",
+          "minItems": 1,
           "items": { "$ref": "#/$defs/bar" }
         },
         "lyrics": {
@@ -125,8 +127,9 @@
       "additionalProperties": false,
       "properties": {
         "chords": {
-          "description": "One entry per bar. This is what makes the phrase 4 bars long.",
+          "description": "One entry per bar. This is what makes the phrase 4 bars long. At least one: a phrase with no bars is not drawn at all, so nothing could ever select it again.",
           "type": "array",
+          "minItems": 1,
           "items": { "$ref": "#/$defs/bar" }
         },
         "lyrics": {

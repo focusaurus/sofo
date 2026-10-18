@@ -195,6 +195,15 @@ export function tempoUnitOf(song) {
 }
 
 /**
+ * Which key the feel is stored under. `feel` is an accepted alias for `groove`,
+ * so an edit has to write back to whichever one the file already used rather than
+ * silently leaving a stale second copy behind.
+ */
+export function groovePath(song) {
+  return song.feel != null && song.groove == null ? "feel" : "groove";
+}
+
+/**
  * The "starting notes" facts, in reading order, skipping anything absent.
  * Groove leads: it is the first thing a band needs and the last thing a chord
  * chart usually says. Count-off is deliberately excluded — it runs long enough
@@ -218,7 +227,7 @@ export function startingNotes(song, { includeEmpty = false } = {}) {
     {
       label: "Feel",
       value: song.groove ?? song.feel,
-      path: song.feel != null && song.groove == null ? "feel" : "groove",
+      path: groovePath(song),
       kind: "groove",
     },
   ];
